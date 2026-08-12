@@ -20,13 +20,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create public runtime configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          test -n "$SUPABASE_URL" && test -n "$SUPABASE_ANON_KEY"
-          printf 'window.PAWPASS_CONFIG = {supabaseUrl: %s, supabaseAnonKey: %s};\n' \
+          test -n "$SUPABASE_URL" && test -n "$SUPABASE_PUBLISHABLE_KEY"
+          case "$SUPABASE_URL" in https://*.supabase.co) ;; *) echo "SUPABASE_URL must be a Supabase project URL" >&2; exit 1;; esac
+          case "$SUPABASE_PUBLISHABLE_KEY" in sb_publishable_*) ;; *) echo "SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key" >&2; exit 1;; esac
+          printf 'window.PAWPASS_CONFIG = {supabaseUrl: %s, supabasePublishableKey: %s};\n' \
             "$(jq -Rn --arg v "$SUPABASE_URL" '$v')" \
-            "$(jq -Rn --arg v "$SUPABASE_ANON_KEY" '$v')" > config.js
+            "$(jq -Rn --arg v "$SUPABASE_PUBLISHABLE_KEY" '$v')" > config.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
