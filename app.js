@@ -24,10 +24,22 @@ const readStoredData = () => {
   try { return JSON.parse(localStorage.getItem(dataStorageKey) || "null"); }
   catch { return null; }
 };
-const hasSession = () => localStorage.getItem(sessionStorageKey) === "active";
-const startSession = () => localStorage.setItem(sessionStorageKey, "active");
-const endSession = () => localStorage.removeItem(sessionStorageKey);
 let state = readStoredData() || structuredClone(seed);
+// Keep authentication with the user's data as well as in the legacy standalone
+// key.  Some existing PawPass sessions on Pages have the data key but lost the
+// session key, which made a reload look like a logout.  The duplicated marker
+// also lets those sessions repair the standalone key without touching pet data.
+const hasSession = () => state.authenticated === true || localStorage.getItem(sessionStorageKey) === "active";
+const startSession = () => {
+  state.authenticated = true;
+  localStorage.setItem(sessionStorageKey, "active");
+  save();
+};
+const endSession = () => {
+  state.authenticated = false;
+  localStorage.removeItem(sessionStorageKey);
+  save();
+};
 let authMode = "signup";
 const speciesEmoji = { dog:"🐕", cat:"🐈", bird:"🐦", other:"🐾" };
 if (!Array.isArray(state.pets)) state.pets=[];
@@ -37,7 +49,7 @@ if (!state.pets.some(p=>String(p.id)===String(state.selectedPetId))) state.selec
 const $ = (s) => document.querySelector(s);
 const save = () => localStorage.setItem(dataStorageKey, JSON.stringify(state));
 const toast = (message) => { const el=$("#toast"); el.textContent=message; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),2400); };
-const viewName = () => (location.hash.replace("#","") || "dashboard").toLowerCase();
+const viewName = () => (location.hash.replace("#","") || state.lastView || "dashboard").toLowerCase();
 const esc = (text="") => String(text).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const selectedPet = () => state.pets.find(p=>String(p.id)===String(state.selectedPetId)) || state.pets[0];
 const petVisual = p => p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name)}">` : esc(p.animal || speciesEmoji[p.species] || "🐾");
@@ -51,7 +63,14 @@ function renderPetSwitcher(){
   if(!p){ box.innerHTML=`<button class="side-add-pet" data-pet-add>+ Add your first pet</button>`; return; }
   box.innerHTML=`<div class="pet-avatar">${petVisual(p)}</div><label><span>Current pet</span><select id="activePet" aria-label="Select current pet">${state.pets.map(x=>`<option value="${x.id}" ${String(x.id)===String(p.id)?"selected":""}>${esc(x.name)}</option>`).join("")}</select><small>${esc(p.breed)}</small></label><button data-view="pets" aria-label="Manage pets">›</button>`;
 }
-function enterApp(){ startSession(); $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden"); if(!nav.some(n=>n.toLowerCase()===viewName())) location.hash="dashboard"; else render(); }
+function enterApp(){
+  startSession();
+  $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden");
+  const route=viewName();
+  if(!nav.some(n=>n.toLowerCase()===route)) location.hash="dashboard";
+  else if(!location.hash && route!=="dashboard") location.hash=route;
+  else render();
+}
 function openAuth(mode){
   authMode=mode; const signup=mode==="signup"; $("#authTitle").textContent=signup?"Create your account":"Welcome back";
   $("#authSubtitle").textContent=signup?"One simple home for a lifetime of care.":"Your pet's care plan is waiting.";
@@ -82,6 +101,7 @@ function emergency(){ const p=selectedPet(); if(!p)return `<div class="card empt
 function settings(){ return `<div class="page-head"><div><h3>Settings</h3><p>Manage your account and PawPass preferences.</p></div></div><div class="card settings-card"><div class="setting-row"><div><b>Profile</b><small>${esc(state.user.name)} · ${esc(state.user.email)}</small></div><button class="link-btn">Edit</button></div><div class="setting-row"><div><b>Care notifications</b><small>Reminders are turned on</small></div><button class="link-btn">Manage</button></div><div class="setting-row"><div><b>Export health records</b><small>Download a portable copy of your pets' history</small></div><button class="link-btn" id="exportData">Export</button></div><div class="setting-row"><div><b>Reset demo data</b><small>Restore the original PawPass sample</small></div><button class="link-btn danger" id="resetData">Reset</button></div><div class="setting-row"><div><b>Log out</b><small>Return to the welcome page</small></div><button class="link-btn" id="logout">Log out</button></div></div>`; }
 function render(){
   const route=viewName(), map={dashboard:dashboard,pets,health:records,schedule,emergency,settings};
+  if(state.lastView!==route){ state.lastView=route; save(); }
   $("#dateLabel").textContent=dateHeading(); $("#pageTitle").textContent=route==="dashboard"?`Good morning, ${firstName()}`:nav.find(n=>n.toLowerCase()===route)||"PawPass";
   document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===route));
   $("#view").innerHTML=(map[route]||dashboard)();
