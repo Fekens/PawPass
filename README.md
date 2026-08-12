@@ -14,6 +14,7 @@ A polished, mobile-first pet care dashboard that keeps everyday care, health rec
 - Shareable-style lost-pet emergency card
 - Responsive desktop sidebar and mobile bottom navigation
 - Browser persistence with `localStorage` (no account or server required for this MVP)
+- Persistent local login sessions, including the current page and selected pet
 
 ## Run locally
 
@@ -30,6 +31,12 @@ You can also open `index.html` directly, though a local server is recommended.
 ## Demo account
 
 Choose **Explore the demo** on the welcome page. The seeded dashboard is immediately available and all changes are saved in your browser. Open **Pets** and choose **+ Add a pet** to create a profile; required fields are marked with an asterisk. New pets appear immediately on the Pets page and dashboard, and can be selected from pet cards or the desktop sidebar. Use each pet card’s **Edit** and **Delete** controls to maintain profiles (deletion asks for confirmation). Photo uploads are stored in the same browser data, with a 2 MB per-photo limit. Use **Reset demo data** under Settings to restore the original sample content.
+
+## Session behavior
+
+Signing up, logging in, or choosing **Explore the demo** starts a local browser session. PawPass restores that session after a refresh or after the page is reopened, returning you to the current section (Dashboard, Pets, Health, Schedule, Emergency, or Settings). The current pet and all pet data are stored separately from the login session and are restored as well.
+
+Choose **Log out** in Settings to intentionally end the session and return to the public landing page. Logging out removes only the local login session; it does not delete pet profiles, health records, schedules, or other saved data. Because this MVP uses browser storage, sessions and data are local to the browser and device where they were created.
 
 ## Project structure
 

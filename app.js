@@ -18,7 +18,16 @@ const seed = {
 
 const icons = { Dashboard:"⌂", Pets:"♧", Health:"✚", Schedule:"◷", Emergency:"⌖", Settings:"⚙", Medication:"💊", Feeding:"🥣", Grooming:"✦", "Vet appointment":"🩺", Vaccination:"💉", "Medical record":"📋" };
 const nav = ["Dashboard","Pets","Health","Schedule","Emergency","Settings"];
-let state = JSON.parse(localStorage.getItem("pawpass-data") || "null") || structuredClone(seed);
+const dataStorageKey = "pawpass-data";
+const sessionStorageKey = "pawpass-session";
+const readStoredData = () => {
+  try { return JSON.parse(localStorage.getItem(dataStorageKey) || "null"); }
+  catch { return null; }
+};
+const hasSession = () => localStorage.getItem(sessionStorageKey) === "active";
+const startSession = () => localStorage.setItem(sessionStorageKey, "active");
+const endSession = () => localStorage.removeItem(sessionStorageKey);
+let state = readStoredData() || structuredClone(seed);
 let authMode = "signup";
 const speciesEmoji = { dog:"🐕", cat:"🐈", bird:"🐦", other:"🐾" };
 if (!Array.isArray(state.pets)) state.pets=[];
@@ -26,7 +35,7 @@ state.pets.forEach(p=>{ p.species ||= p.animal==="🐈"?"cat":p.animal==="🐦"?
 if (!state.pets.some(p=>String(p.id)===String(state.selectedPetId))) state.selectedPetId=state.pets[0]?.id ?? null;
 
 const $ = (s) => document.querySelector(s);
-const save = () => localStorage.setItem("pawpass-data", JSON.stringify(state));
+const save = () => localStorage.setItem(dataStorageKey, JSON.stringify(state));
 const toast = (message) => { const el=$("#toast"); el.textContent=message; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),2400); };
 const viewName = () => (location.hash.replace("#","") || "dashboard").toLowerCase();
 const esc = (text="") => String(text).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -42,7 +51,7 @@ function renderPetSwitcher(){
   if(!p){ box.innerHTML=`<button class="side-add-pet" data-pet-add>+ Add your first pet</button>`; return; }
   box.innerHTML=`<div class="pet-avatar">${petVisual(p)}</div><label><span>Current pet</span><select id="activePet" aria-label="Select current pet">${state.pets.map(x=>`<option value="${x.id}" ${String(x.id)===String(p.id)?"selected":""}>${esc(x.name)}</option>`).join("")}</select><small>${esc(p.breed)}</small></label><button data-view="pets" aria-label="Manage pets">›</button>`;
 }
-function enterApp(){ $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden"); if(!location.hash) location.hash="dashboard"; render(); }
+function enterApp(){ startSession(); $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden"); if(!nav.some(n=>n.toLowerCase()===viewName())) location.hash="dashboard"; else render(); }
 function openAuth(mode){
   authMode=mode; const signup=mode==="signup"; $("#authTitle").textContent=signup?"Create your account":"Welcome back";
   $("#authSubtitle").textContent=signup?"One simple home for a lifetime of care.":"Your pet's care plan is waiting.";
@@ -102,11 +111,13 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#shareEmergency")){ navigator.clipboard?.writeText(location.href); toast("Emergency profile link copied"); }
   if(e.target.closest("#exportData")){ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="pawpass-records.json";a.click();toast("Your records are ready"); }
   if(e.target.closest("#resetData")){ state=structuredClone(seed);save();render();toast("Demo data restored"); }
-  if(e.target.closest("#logout")){ $("#app").classList.add("hidden");$("#welcome").classList.remove("hidden");history.replaceState(null,"",location.pathname); }
+  if(e.target.closest("#logout")){ endSession(); $("#app").classList.add("hidden");$("#welcome").classList.remove("hidden");history.replaceState(null,"",location.pathname+location.search); }
 });
 document.addEventListener("change",e=>{ if(e.target.id==="activePet"){state.selectedPetId=state.pets.find(p=>String(p.id)===e.target.value)?.id;save();render();toast(`${selectedPet().name} selected`);} });
 $("#petForm").elements.photo.addEventListener("change",e=>{ const file=e.target.files[0]; if(!file)return; if(!file.type.startsWith("image/")){ $("#petFormError").textContent="Please choose an image file.";e.target.value="";return;} if(file.size>2*1024*1024){$("#petFormError").textContent="Please choose a photo smaller than 2 MB.";e.target.value="";return;} const reader=new FileReader();reader.onload=()=>{$("#petForm").dataset.photo=reader.result;updatePhotoPreview(reader.result);};reader.readAsDataURL(file); });
 $("#petForm").addEventListener("submit",e=>{e.preventDefault();const form=e.target,f=new FormData(form), birthday=f.get("birthday"),age=f.get("age").trim();if(!birthday&&!age){$("#petFormError").textContent="Enter a date of birth or an age.";form.elements.birthday.focus();return;}const id=f.get("id"), existing=state.pets.find(p=>String(p.id)===String(id));const pet={...(existing||{}),id:existing?.id||Date.now(),name:f.get("name").trim(),species:f.get("species"),animal:speciesEmoji[f.get("species")],breed:f.get("breed").trim(),birthday,age,sex:f.get("sex"),weight:f.get("weight").trim(),photo:form.dataset.photo||"",microchip:f.get("microchip").trim(),allergies:f.get("allergies").trim(),medications:f.get("medications").trim(),vetName:f.get("vetName").trim(),vetPhone:f.get("vetPhone").trim(),medicalNotes:f.get("medicalNotes").trim(),status:existing?.status||"Profile ready"};if(existing)Object.assign(existing,pet);else state.pets.push(pet);state.selectedPetId=pet.id;save();$("#petDialog").close();render();toast(existing?`${pet.name}'s profile updated`:`${pet.name} joined PawPass!`);});
 $("#authForm").addEventListener("submit",e=>{e.preventDefault();const fd=new FormData(e.target);if(authMode==="signup"&&fd.get("name"))state.user.name=fd.get("name");state.user.email=fd.get("email");save();$("#authDialog").close();enterApp();toast(authMode==="signup"?"Welcome to PawPass!":"Welcome back!");});
 $("#itemForm").addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.target),type=f.get("type"),raw=f.get("date"),d=new Date(raw+"T12:00:00"),today=new Date();let label=d.toDateString()===today.toDateString()?"Today":d.toLocaleDateString("en-US",{month:"short",day:"numeric"});let time=f.get("time")?new Date(`2000-01-01T${f.get("time")}`).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"All day";const item={type,title:f.get("title"),date:label,time,notes:f.get("notes")||"No additional notes"};if(type==="Medical record"||type==="Vaccination")state.records.unshift(item);else state.tasks.push({...item,id:Date.now(),done:false});save();$("#itemDialog").close();render();toast(`${type} added to ${(selectedPet()?.name || "your pet")}'s care plan`);});
-window.addEventListener("hashchange",render); buildNav();
+window.addEventListener("hashchange",()=>{ if(hasSession()) render(); });
+buildNav();
+if(hasSession()) enterApp();
