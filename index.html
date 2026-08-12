@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f5ef">
+  <meta name="description" content="PawPass keeps every part of your pet's care in one happy place.">
+  <title>PawPass — Pet care, beautifully organized</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main id="welcome" class="welcome">
+    <nav class="landing-nav wrap">
+      <a class="brand" href="#"><span class="brand-mark">P</span><span>PawPass</span></a>
+      <div class="nav-actions"><button class="text-btn" data-auth="login">Log in</button><button class="btn btn-dark" data-auth="signup">Get started</button></div>
+    </nav>
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <div class="eyebrow"><span>●</span> Thoughtful care, every day</div>
+        <h1>Everything they need.<br><em>One happy place.</em></h1>
+        <p>PawPass brings health records, daily routines, and important reminders together—so you can spend less time organizing and more time loving them.</p>
+        <div class="hero-actions"><button class="btn btn-primary btn-large" data-auth="signup">Create your free PawPass <span>→</span></button><button id="demoBtn" class="btn btn-ghost btn-large"><span class="play">▶</span> Explore the demo</button></div>
+        <div class="trust"><div class="avatar-stack"><span>🐕</span><span>🐈</span><span>🐩</span></div><div><b>Made for pet people</b><small>Simple, private, and always close by</small></div></div>
+      </div>
+      <div class="hero-visual" aria-label="Preview of the PawPass app">
+        <div class="sun-shape"></div>
+        <div class="phone-card">
+          <div class="phone-head"><span class="mini-logo">P</span><span>Good morning, Alex</span><b>•••</b></div>
+          <div class="pet-feature">
+            <div class="pet-art dog-art">🐕</div>
+            <div><small>MY COMPANION</small><h3>Milo</h3><p>Golden Retriever · 3 years</p></div>
+            <span class="status-pill">● Healthy</span>
+          </div>
+          <div class="today-line"><b>Today's care</b><small>2 of 4 complete</small></div>
+          <div class="progress"><i></i></div>
+          <div class="task-preview"><span class="task-icon coral">💊</span><div><b>Heartworm tablet</b><small>Today · 8:00 AM</small></div><span class="check">✓</span></div>
+          <div class="task-preview"><span class="task-icon mint">🥣</span><div><b>Evening meal</b><small>Today · 6:30 PM</small></div><span class="empty-check"></span></div>
+          <div class="floating-card"><span>🩺</span><div><small>NEXT APPOINTMENT</small><b>Annual wellness visit</b><p>Friday, 10:30 AM</p></div></div>
+        </div>
+        <div class="orbit orbit-one">♥</div><div class="orbit orbit-two">✦</div>
+      </div>
+    </section>
+    <section class="feature-strip wrap">
+      <article><span>✚</span><div><b>Health, all together</b><p>Records and vaccines at your fingertips.</p></div></article>
+      <article><span>◷</span><div><b>Never miss a moment</b><p>Gentle reminders for everyday care.</p></div></article>
+      <article><span>⌖</span><div><b>Ready for anything</b><p>An emergency profile when it matters.</p></div></article>
+    </section>
+  </main>
+
+  <main id="app" class="app hidden">
+    <aside class="sidebar">
+      <a class="brand side-brand" href="#dashboard"><span class="brand-mark">P</span><span>PawPass</span></a>
+      <nav id="sideNav" class="side-nav"></nav>
+      <div class="side-pet"><div class="pet-avatar">🐕</div><div><b>Milo</b><small>Golden Retriever</small></div><button data-view="pets">⌄</button></div>
+    </aside>
+    <section class="workspace">
+      <header class="app-header"><div><button class="mobile-brand" data-view="dashboard"><span class="brand-mark">P</span></button><p id="dateLabel"></p><h2 id="pageTitle">Good morning, Alex</h2></div><div class="header-actions"><button class="icon-btn" aria-label="Notifications">♢<i></i></button><button class="profile-btn" data-view="settings">AL</button></div></header>
+      <div id="view" class="view"></div>
+    </section>
+    <nav id="mobileNav" class="mobile-nav"></nav>
+  </main>
+
+  <dialog id="authDialog" class="modal auth-modal">
+    <button class="modal-close" data-close aria-label="Close">×</button>
+    <div class="auth-logo"><span class="brand-mark">P</span></div>
+    <p class="eyebrow centered">WELCOME TO PAWPASS</p>
+    <h2 id="authTitle">Create your account</h2>
+    <p id="authSubtitle">One simple home for a lifetime of care.</p>
+    <form id="authForm">
+      <label id="nameField">Your name<input name="name" placeholder="Alex Morgan" autocomplete="name"></label>
+      <label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label>
+      <label>Password<input name="password" type="password" placeholder="At least 8 characters" minlength="8" required autocomplete="current-password"></label>
+      <button class="btn btn-primary btn-block" type="submit"><span id="authSubmit">Create account</span> →</button>
+    </form>
+    <p class="switch-auth" id="switchAuth"></p>
+  </dialog>
+
+  <dialog id="itemDialog" class="modal item-modal">
+    <button class="modal-close" data-close aria-label="Close">×</button>
+    <p class="eyebrow">QUICK ADD</p><h2 id="itemTitle">Add a reminder</h2><p>Keep your pet's care plan up to date.</p>
+    <form id="itemForm">
+      <input type="hidden" name="kind" value="medication">
+      <label>Type<select name="type"><option>Medication</option><option>Vet appointment</option><option>Grooming</option><option>Feeding</option><option>Vaccination</option><option>Medical record</option></select></label>
+      <label>Title<input name="title" placeholder="e.g. Heartworm tablet" required></label>
+      <div class="form-row"><label>Date<input name="date" type="date" required></label><label>Time<input name="time" type="time"></label></div>
+      <label>Notes<textarea name="notes" placeholder="Optional details"></textarea></label>
+      <button class="btn btn-primary btn-block" type="submit">Save to care plan →</button>
+    </form>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+</html>
