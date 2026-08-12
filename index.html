@@ -56,7 +56,7 @@
     <aside class="sidebar">
       <a class="brand side-brand" href="#dashboard"><span class="brand-mark">P</span><span>PawPass</span></a>
       <nav id="sideNav" class="side-nav"></nav>
-      <div class="side-pet"><div class="pet-avatar">🐕</div><div><b>Milo</b><small>Golden Retriever</small></div><button data-view="pets">⌄</button></div>
+      <div id="petSwitcher" class="side-pet"></div>
     </aside>
     <section class="workspace">
       <header class="app-header"><div><button class="mobile-brand" data-view="dashboard"><span class="brand-mark">P</span></button><p id="dateLabel"></p><h2 id="pageTitle">Good morning, Alex</h2></div><div class="header-actions"><button class="icon-btn" aria-label="Notifications">♢<i></i></button><button class="profile-btn" data-view="settings">AL</button></div></header>
@@ -90,6 +90,29 @@
       <div class="form-row"><label>Date<input name="date" type="date" required></label><label>Time<input name="time" type="time"></label></div>
       <label>Notes<textarea name="notes" placeholder="Optional details"></textarea></label>
       <button class="btn btn-primary btn-block" type="submit">Save to care plan →</button>
+    </form>
+  </dialog>
+
+  <dialog id="petDialog" class="modal pet-modal">
+    <button class="modal-close" data-close aria-label="Close">×</button>
+    <p class="eyebrow">PET PROFILE</p><h2 id="petDialogTitle">Add a pet</h2>
+    <p>Keep the details that matter close at paw.</p>
+    <form id="petForm">
+      <input type="hidden" name="id">
+      <div class="photo-field">
+        <div id="photoPreview" class="photo-preview" aria-hidden="true">🐾</div>
+        <label>Profile photo <span class="optional">Optional</span><input name="photo" type="file" accept="image/*"></label>
+      </div>
+      <div class="form-row"><label>Pet name <span class="required">*</span><input name="name" required maxlength="50" autocomplete="off"></label><label>Species <span class="required">*</span><select name="species" required><option value="">Choose one</option><option value="dog">Dog</option><option value="cat">Cat</option><option value="bird">Bird</option><option value="other">Other</option></select></label></div>
+      <label>Breed <span class="required">*</span><input name="breed" required maxlength="80" placeholder="e.g. Golden Retriever"></label>
+      <fieldset><legend>Age <span class="required">*</span></legend><p class="field-help">Enter a date of birth or an age.</p><div class="form-row"><label>Date of birth<input name="birthday" type="date"></label><label>Age<input name="age" maxlength="30" placeholder="e.g. 3 years"></label></div></fieldset>
+      <div class="form-row"><label>Sex <span class="required">*</span><select name="sex" required><option value="">Choose one</option><option>Female</option><option>Male</option><option>Unknown</option></select></label><label>Weight <span class="required">*</span><input name="weight" required maxlength="30" placeholder="e.g. 31 kg"></label></div>
+      <label>Microchip number<input name="microchip" maxlength="40"></label>
+      <div class="form-row"><label>Allergies<textarea name="allergies" placeholder="None known"></textarea></label><label>Medications<textarea name="medications" placeholder="None"></textarea></label></div>
+      <div class="form-row"><label>Veterinarian name<input name="vetName" maxlength="80"></label><label>Veterinarian phone<input name="vetPhone" type="tel" maxlength="30"></label></div>
+      <label>Medical notes<textarea name="medicalNotes" placeholder="Conditions, care instructions, or anything else to know"></textarea></label>
+      <p id="petFormError" class="form-error" role="alert"></p>
+      <div class="modal-actions"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Save Pet</button></div>
     </form>
   </dialog>
   <script src="app.js"></script>
