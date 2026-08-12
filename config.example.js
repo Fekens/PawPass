@@ -3,5 +3,5 @@
 // when Row Level Security remains enabled. Never put a service-role key here.
 window.PAWPASS_CONFIG = {
   supabaseUrl: "https://YOUR_PROJECT.supabase.co",
-  supabaseAnonKey: "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+  supabasePublishableKey: "sb_publishable_YOUR_PUBLISHABLE_KEY"
 };

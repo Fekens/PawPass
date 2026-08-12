@@ -26,7 +26,9 @@ Create the ignored `config.js` from the template:
 cp config.example.js config.js
 ```
 
-Replace the two placeholders with the Project URL and publishable/anon key. Then serve the directory:
+Replace the two placeholders with the Project URL and publishable key. The legacy
+`supabaseAnonKey` property remains supported for existing local configurations. Then
+serve the directory:
 
 ```bash
 python3 -m http.server 4173
@@ -36,14 +38,14 @@ Open <http://localhost:4173/>. A missing `config.js` intentionally disables prod
 
 ## GitHub Pages deployment
 
-The included [Pages workflow](.github/workflows/deploy-pages.yml) generates `config.js` only inside the deployment artifact, so environment-specific values are not committed.
+The included [Pages workflow](.github/workflows/deploy-pages.yml) generates `config.js` only inside the deployment artifact from public Actions variables, so environment-specific values are not committed. Supabase publishable keys are designed for public clients; database access remains protected by RLS.
 
-1. In the repository, open **Settings → Secrets and variables → Actions** and create repository secrets named `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+1. In the repository, open **Settings → Secrets and variables → Actions → Variables** and create repository variables named `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Use only the `sb_publishable_...` key from the Supabase project's API settings. Never put a secret or service-role key in either variable.
 2. Open **Settings → Pages** and select **GitHub Actions** as the source.
 3. Push to `main` or manually run **Deploy PawPass to Pages**. The job validates both values, creates the runtime config, and deploys the static artifact.
 4. Ensure the final Pages URL is present in Supabase's Site URL and Redirect URLs as described above.
 
-The publishable key is not an authorization boundary—RLS is. Storing it as an Actions secret avoids hard-coding environment configuration and accidental substitution with a privileged key.
+The deployment validates the Supabase URL and the `sb_publishable_...` prefix before producing the public browser configuration. The publishable key is not an authorization boundary—RLS is—and the workflow deliberately rejects secret and service-role key formats.
 
 ## Account behavior
 

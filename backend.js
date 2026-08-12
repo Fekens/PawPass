@@ -1,8 +1,9 @@
 /* Production persistence/auth adapter. Demo mode never contacts Supabase. */
 window.PawPassBackend = (() => {
   const cfg = window.PAWPASS_CONFIG || {};
-  const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase);
-  const client = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+  const publishableKey = cfg.supabasePublishableKey || cfg.supabaseAnonKey;
+  const configured = Boolean(cfg.supabaseUrl && publishableKey && window.supabase);
+  const client = configured ? window.supabase.createClient(cfg.supabaseUrl, publishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   }) : null;
   let mode = localStorage.getItem("pawpass-mode") || "cloud";
