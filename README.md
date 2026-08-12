@@ -5,7 +5,9 @@ A polished, mobile-first pet care dashboard that keeps everyday care, health rec
 ## MVP features
 
 - Friendly public landing page with sign-up and login flows
-- Multi-pet profiles with name, photo, breed, birthday, weight, and microchip details
+- Full multi-pet profile creation with required-field validation, photo uploads, species, breed, birthday or age, sex, weight, microchip, allergy, medication, veterinarian, and medical details
+- Instant pet switching across the dashboard, Pets page, and emergency profile
+- Pet profile editing and confirmation-protected deletion
 - Unified dashboard for upcoming feeding, medication, vaccination, vet, and grooming tasks
 - Medical records and vaccination history
 - Medication, appointment, grooming, and feeding schedule management
@@ -27,7 +29,7 @@ You can also open `index.html` directly, though a local server is recommended.
 
 ## Demo account
 
-Choose **Explore the demo** on the welcome page. The seeded dashboard is immediately available and all changes are saved in your browser. Use **Reset demo data** under Settings to restore the original sample content.
+Choose **Explore the demo** on the welcome page. The seeded dashboard is immediately available and all changes are saved in your browser. Open **Pets** and choose **+ Add a pet** to create a profile; required fields are marked with an asterisk. New pets appear immediately on the Pets page and dashboard, and can be selected from pet cards or the desktop sidebar. Use each pet card’s **Edit** and **Delete** controls to maintain profiles (deletion asks for confirmation). Photo uploads are stored in the same browser data, with a 2 MB per-photo limit. Use **Reset demo data** under Settings to restore the original sample content.
 
 ## Project structure
 
