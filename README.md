@@ -1,53 +1,80 @@
 # PawPass
 
-A polished, mobile-first pet care dashboard that keeps everyday care, health records, appointments, and an emergency lost-pet profile in one place.
+PawPass is a mobile-first pet-care dashboard with production accounts backed by Supabase and a deliberately separate, browser-only demo. The existing dashboard, multi-pet profiles, health history, schedules, emergency card, and responsive navigation remain available.
 
-## MVP features
+## Architecture and security
 
-- Friendly public landing page with sign-up and login flows
-- Full multi-pet profile creation with required-field validation, photo uploads, species, breed, birthday or age, sex, weight, microchip, allergy, medication, veterinarian, and medical details
-- Instant pet switching across the dashboard, Pets page, and emergency profile
-- Pet profile editing and confirmation-protected deletion
-- Unified dashboard for upcoming feeding, medication, vaccination, vet, and grooming tasks
-- Medical records and vaccination history
-- Medication, appointment, grooming, and feeding schedule management
-- Shareable-style lost-pet emergency card
-- Responsive desktop sidebar and mobile bottom navigation
-- Browser persistence with `localStorage` (no account or server required for this MVP)
-- Persistent local login sessions, including the current page and selected pet
+- **Production mode:** Supabase Auth handles password hashing, sessions, email verification, logout, and password recovery. PostgreSQL stores profiles, pets, the selected pet, health records, schedules, emergency data, and settings.
+- **Tenant isolation:** every application table has Row Level Security (RLS). Policies compare `auth.uid()` with the row owner and also validate each child row's pet ownership. The browser never receives a service-role key.
+- **Demo mode:** **Explore the demo** explicitly selects local mode and uses the existing `pawpass-data` localStorage content. Demo data is not uploaded and is not an account.
+- The Supabase publishable/legacy anon key is safe to expose to a browser **only with RLS enabled**. Treat the service-role key as a secret and never add it to this repository or frontend.
 
-## Run locally
+## Supabase setup (production)
 
-PawPass is dependency-free. Start any static web server from the project directory:
+1. Create a project at Supabase and save the **Project URL** and **Publishable key** (or legacy `anon` key) from **Project Settings → API**. Do not use the service-role key.
+2. Open **SQL Editor**, paste [`supabase/migrations/20260812000000_pawpass_schema.sql`](supabase/migrations/20260812000000_pawpass_schema.sql), and select **Run**. This creates `profiles`, `pets`, `user_settings`, `health_records`, `schedules`, and `emergency_data`, indexes, ownership policies, and the new-user profile trigger.
+3. In **Authentication → URL Configuration**, set **Site URL** to the deployed Pages URL, for example `https://OWNER.github.io/PawPass/`.
+4. Add that exact URL and the local URL `http://localhost:4173/` to **Redirect URLs**. Password-reset links return to one of these allow-listed URLs.
+5. In **Authentication → Providers → Email**, leave Email enabled. For production, keep **Confirm email** enabled and configure a custom SMTP provider under **Authentication → SMTP Settings**; Supabase's default sender is rate-limited and intended only for trials.
+6. Customize the confirmation and reset email templates if desired. PawPass calls Supabase's standard secure, expiring recovery flow; it never emails or stores a password itself.
+
+### Local runtime configuration
+
+Create the ignored `config.js` from the template:
+
+```bash
+cp config.example.js config.js
+```
+
+Replace the two placeholders with the Project URL and publishable/anon key. Then serve the directory:
 
 ```bash
 python3 -m http.server 4173
 ```
 
-Then open [http://localhost:4173](http://localhost:4173).
+Open <http://localhost:4173/>. A missing `config.js` intentionally disables production account actions while **Explore the demo** continues to work.
 
-You can also open `index.html` directly, though a local server is recommended.
+## GitHub Pages deployment
 
-## Demo account
+The included [Pages workflow](.github/workflows/deploy-pages.yml) generates `config.js` only inside the deployment artifact, so environment-specific values are not committed.
 
-Choose **Explore the demo** on the welcome page. The seeded dashboard is immediately available and all changes are saved in your browser. Open **Pets** and choose **+ Add a pet** to create a profile; required fields are marked with an asterisk. New pets appear immediately on the Pets page and dashboard, and can be selected from pet cards or the desktop sidebar. Use each pet card’s **Edit** and **Delete** controls to maintain profiles (deletion asks for confirmation). Photo uploads are stored in the same browser data, with a 2 MB per-photo limit. Use **Reset demo data** under Settings to restore the original sample content.
+1. In the repository, open **Settings → Secrets and variables → Actions** and create repository secrets named `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+2. Open **Settings → Pages** and select **GitHub Actions** as the source.
+3. Push to `main` or manually run **Deploy PawPass to Pages**. The job validates both values, creates the runtime config, and deploys the static artifact.
+4. Ensure the final Pages URL is present in Supabase's Site URL and Redirect URLs as described above.
 
-## Session behavior
+The publishable key is not an authorization boundary—RLS is. Storing it as an Actions secret avoids hard-coding environment configuration and accidental substitution with a privileged key.
 
-Signing up, logging in, or choosing **Explore the demo** starts a local browser session. PawPass restores that session after a refresh or after the page is reopened, returning you to the current section (Dashboard, Pets, Health, Schedule, Emergency, or Settings). The current pet and all pet data are stored separately from the login session and are restored as well.
+## Account behavior
 
-Choose **Log out** in Settings to intentionally end the session and return to the public landing page. Logging out removes only the local login session; it does not delete pet profiles, health records, schedules, or other saved data. Because this MVP uses browser storage, sessions and data are local to the browser and device where they were created.
+- Registration requires name, email, and a password of at least eight characters. With email confirmation enabled, the user must follow the confirmation email before logging in.
+- Login sessions are securely persisted and refreshed by the Supabase client, so a refresh or second browser session shows the same server-backed data after login.
+- **Forgot your password?** sends a reset email. The return link opens PawPass's new-password form and updates the password through the authenticated recovery session.
+- **Log out** revokes the local Supabase session and returns to the landing page without deleting account data.
+- Tasks and health records are attached to the selected pet. Server-side RLS prevents one account from reading or changing another account's rows even if browser requests are modified.
+
+## Verification checklist
+
+Use two private/incognito browser profiles against the configured deployment:
+
+1. Register with a new name, email, and 8+ character password; confirm the email when confirmation is enabled.
+2. Log in, create a pet, add a health record and schedule, select that pet, then refresh. Confirm all values and the selected pet remain.
+3. Log out and confirm the dashboard is no longer visible.
+4. In the second browser profile, log into the same account and confirm the pet and records appear. Then register a different account and confirm the first account's pets do not appear.
+5. On Login choose **Forgot your password?**, follow the email link, set a new password, log out, and log in with the new password.
+6. Choose **Explore the demo**, edit sample content, refresh, and confirm demo persistence. Confirm **Reset demo data** affects only local demo data.
+
+Automated static checks cannot deliver authentication email or create real accounts without a configured Supabase project. Complete the browser checklist after configuring the deployment; inspect Supabase **Authentication → Users** and Table Editor to confirm persisted ownership.
 
 ## Project structure
 
 ```text
 .
-├── index.html   # Application shell, landing page, dialogs, and view templates
-├── styles.css   # Responsive design system and component styles
-├── app.js       # State, routing, persistence, and interactions
-└── README.md
+├── index.html                 # Application shell and account/recovery dialogs
+├── styles.css                 # Existing responsive design
+├── app.js                     # UI state, routing, and interactions
+├── backend.js                 # Supabase auth/database adapter and demo separation
+├── config.example.js          # Safe runtime configuration template
+├── supabase/migrations/       # Database schema, triggers, indexes, and RLS
+└── .github/workflows/         # GitHub Pages deployment
 ```
-
-## Technical notes
-
-This first version deliberately uses semantic HTML, modern CSS, and vanilla JavaScript to stay fast and easy to run. Data is stored per browser in `localStorage`; authentication is a local prototype flow and must be replaced by a secure backend before production use.
