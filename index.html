@@ -76,8 +76,23 @@
       <label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label>
       <label>Password<input name="password" type="password" placeholder="At least 8 characters" minlength="8" required autocomplete="current-password"></label>
       <button class="btn btn-primary btn-block" type="submit"><span id="authSubmit">Create account</span> →</button>
+      <p id="authError" class="form-error" role="alert"></p>
     </form>
+    <button id="forgotBtn" class="text-btn hidden" type="button">Forgot your password?</button>
     <p class="switch-auth" id="switchAuth"></p>
+  </dialog>
+
+  <dialog id="resetDialog" class="modal auth-modal">
+    <button class="modal-close" data-close aria-label="Close">×</button>
+    <div class="auth-logo"><span class="brand-mark">P</span></div>
+    <h2 id="resetTitle">Reset your password</h2>
+    <p id="resetSubtitle">Enter your account email and we'll send a secure reset link.</p>
+    <form id="resetForm">
+      <label id="resetEmailField">Email address<input name="email" type="email" required autocomplete="email"></label>
+      <label id="newPasswordField" class="hidden">New password<input name="password" type="password" minlength="8" autocomplete="new-password"></label>
+      <p id="resetError" class="form-error" role="alert"></p>
+      <button class="btn btn-primary btn-block" type="submit">Send reset link</button>
+    </form>
   </dialog>
 
   <dialog id="itemDialog" class="modal item-modal">
@@ -115,6 +130,9 @@
       <div class="modal-actions"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Save Pet</button></div>
     </form>
   </dialog>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="backend.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
