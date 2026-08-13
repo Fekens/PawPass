@@ -39,8 +39,9 @@
     const pet = selectedPet();
     if (!pet) return null;
     return {
-      v: 1,
+      v: 2,
       owner: state.user?.name || 'Pet owner',
+      ownerPhone: state.user?.emergencyPhone || '',
       pet: {
         name: pet.name || 'Pet',
         species: pet.species || '',
@@ -91,11 +92,11 @@
           </div>
           <div class="public-lost-details">
             <div><small>OWNER</small><b>${safe(payload.owner || 'Pet owner')}</b></div>
+            <div><small>OWNER CONTACT</small><b>${safe(payload.ownerPhone || 'Not provided')}</b></div>
             <div><small>VETERINARIAN</small><b>${safe(pet.vetPhone || pet.vetName || 'Not provided')}</b></div>
             <div><small>MICROCHIP</small><b>${safe(pet.microchip || 'Not provided')}</b></div>
             <div><small>ALLERGIES</small><b>${safe(pet.allergies || 'None listed')}</b></div>
             <div><small>MEDICATIONS</small><b>${safe(pet.medications || 'None listed')}</b></div>
-            <div><small>SPECIES</small><b>${safe(pet.species || 'Not provided')}</b></div>
           </div>
           <div class="public-lost-notes">
             <small>EMERGENCY NOTES</small>
@@ -127,7 +128,7 @@
   const publicToken = new URLSearchParams(location.search).get(paramName);
   if (publicToken) {
     const payload = decodePayload(publicToken);
-    if (payload?.v === 1 && payload.pet) {
+    if ((payload?.v === 1 || payload?.v === 2) && payload.pet) {
       const show = () => renderPublicProfile(payload);
       try { enterApp = show; } catch {}
       try { render = show; } catch {}
@@ -144,6 +145,11 @@
     const url = publicUrl();
     if (!url) {
       toast('Add a pet before sharing an emergency profile');
+      return;
+    }
+    if (!state.user?.emergencyPhone) {
+      toast('Add an emergency contact phone in Settings → Edit before sharing');
+      location.hash = 'settings';
       return;
     }
     try {
