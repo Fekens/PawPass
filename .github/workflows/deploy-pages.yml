@@ -37,6 +37,9 @@ jobs:
           if ! grep -q 'profile-edit.js' index.html; then
             sed -i 's#  <script src="navigation-fix.js"></script>#  <script src="navigation-fix.js"></script>\n  <script src="profile-edit.js"></script>#' index.html
           fi
+          if ! grep -q 'emergency-share.js' index.html; then
+            sed -i 's#  <script src="profile-edit.js"></script>#  <script src="profile-edit.js"></script>\n  <script src="emergency-share.js"></script>#' index.html
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
