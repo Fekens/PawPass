@@ -19,9 +19,6 @@ window.PawPassBackend = (() => {
     if (!client) return { mode, user: null, data: null };
     const { data, error } = await client.auth.getSession(); if (error) message(error);
     user = data.session?.user || null;
-    // A recovery session only needs Supabase Auth. Do not query PawPass tables
-    // until after the password has been changed; this prevents recovery links
-    // from being blocked by unrelated table/RLS permissions.
     return { mode, user, data: user && !recoveryRequested() ? await load() : null };
   }
   async function signUp(name, email, password) {
@@ -37,8 +34,6 @@ window.PawPassBackend = (() => {
   async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; }
   async function forgot(email) {
     assertCloud();
-    // Keep an explicit recovery marker in the query string. Supabase may use
-    // the URL fragment for auth tokens, so the query marker remains reliable.
     const redirectTo = `${location.origin}${location.pathname}?type=recovery`;
     const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) message(error);
@@ -55,8 +50,9 @@ window.PawPassBackend = (() => {
     const results = await Promise.all(tables.map(table => client.from(table).select("*").then(({data,error}) => { if(error) message(error); return data; })));
     const [profiles, settings, pets, records, tasks, emergency] = results;
     const profile = profiles[0] || {};
+    const emergencyPhone = emergency.find(e => e.contact_phone)?.contact_phone || "";
     return {
-      user: { name: profile.name || user.user_metadata?.name || "Pet parent", email: user.email },
+      user: { name: profile.name || user.user_metadata?.name || "Pet parent", email: user.email, emergencyPhone },
       selectedPetId: settings[0]?.selected_pet_id || pets[0]?.id || null,
       lastView: settings[0]?.last_view || "dashboard",
       pets: pets.map(p => ({ id:p.id,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age,weight:p.weight,birthday:p.birthday,sex:p.sex,photo:p.photo_url||"",microchip:p.microchip||"",allergies:p.allergies||"",medications:p.medications||"",vetName:p.vet_name||"",vetPhone:p.vet_phone||"",medicalNotes:p.medical_notes||"",status:p.status })),
@@ -75,7 +71,7 @@ window.PawPassBackend = (() => {
       client.from("user_settings").upsert({user_id:uid,selected_pet_id:state.selectedPetId||null,last_view:state.lastView||"dashboard"}),
       state.records.length ? client.from("health_records").upsert(state.records.map(r=>({id:r.id,user_id:uid,pet_id:r.petId,record_type:r.type,title:r.title,record_date:r.date,notes:r.notes}))) : Promise.resolve({}),
       state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,display_time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
-      state.pets.length ? client.from("emergency_data").upsert(state.pets.map(p=>({pet_id:p.id,user_id:uid,contact_name:state.user.name,contact_phone:p.vetPhone||null,notes:p.medicalNotes||null}))) : Promise.resolve({})
+      state.pets.length ? client.from("emergency_data").upsert(state.pets.map(p=>({pet_id:p.id,user_id:uid,contact_name:state.user.name,contact_phone:state.user.emergencyPhone||null,notes:p.medicalNotes||null}))) : Promise.resolve({})
     ];
     const results=await Promise.all(operations); const failure=results.find(x=>x.error); if(failure) message(failure.error);
     const cleanup = await Promise.all(["pets","health_records","schedules"].map(async table => {
