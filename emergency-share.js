@@ -135,6 +135,66 @@
     return true;
   }
 
+  function ensureQrButton() {
+    const share = document.getElementById('shareEmergency');
+    if (!share || document.getElementById('qrEmergency')) return;
+    const button = document.createElement('button');
+    button.id = 'qrEmergency';
+    button.type = 'button';
+    button.className = share.className;
+    button.textContent = '▦ QR pet tag';
+    button.style.marginRight = '10px';
+    share.parentNode.insertBefore(button, share);
+  }
+
+  function showQrTag() {
+    const url = publicUrl();
+    const pet = selectedPet();
+    if (!url || !pet) {
+      toast('Add a pet before creating a QR tag');
+      return;
+    }
+    if (!state.user?.emergencyPhone) {
+      toast('Add an emergency contact phone in Settings → Edit first');
+      location.hash = 'settings';
+      return;
+    }
+
+    let dialog = document.getElementById('qrTagDialog');
+    if (!dialog) {
+      dialog = document.createElement('dialog');
+      dialog.id = 'qrTagDialog';
+      dialog.className = 'auth-dialog';
+      document.body.appendChild(dialog);
+    }
+
+    const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=24&data=${encodeURIComponent(url)}`;
+    dialog.innerHTML = `
+      <div class="auth-card" style="max-width:480px;text-align:center">
+        <button class="dialog-close" type="button" aria-label="Close">×</button>
+        <div class="auth-logo"><span class="brand-mark">P</span></div>
+        <p class="eyebrow centered">PAWPASS PET TAG</p>
+        <h2>${safe(pet.name || 'Pet')} QR code</h2>
+        <p>Scan this code to open the public lost-pet profile.</p>
+        <img src="${safe(qrImage)}" alt="QR code for ${safe(pet.name || 'pet')} emergency profile" style="width:min(320px,90%);background:#fff;padding:12px;border-radius:18px;margin:10px auto 18px;display:block">
+        <div style="display:grid;gap:10px">
+          <a class="btn btn-primary btn-block" href="${safe(qrImage)}" target="_blank" rel="noopener">Open / save QR code →</a>
+          <button class="btn btn-dark btn-block" id="copyQrLink" type="button">Copy emergency link</button>
+        </div>
+        <p class="field-help" style="margin-top:14px">If you change the owner contact or Milo's emergency details later, create and print a new QR tag.</p>
+      </div>`;
+    dialog.querySelector('.dialog-close').onclick = () => dialog.close();
+    dialog.querySelector('#copyQrLink').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Emergency link copied');
+      } catch {
+        window.prompt('Copy this emergency link:', url);
+      }
+    };
+    dialog.showModal();
+  }
+
   const publicToken = new URLSearchParams(location.search).get(paramName);
   if (publicToken) {
     const payload = decodePayload(publicToken);
@@ -145,9 +205,21 @@
       show();
       window.addEventListener('load', show, { once: true });
     }
+  } else {
+    ensureQrButton();
+    window.addEventListener('load', ensureQrButton);
+    new MutationObserver(ensureQrButton).observe(document.body, { childList: true, subtree: true });
   }
 
   document.addEventListener('click', async event => {
+    const qr = event.target.closest('#qrEmergency');
+    if (qr) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showQrTag();
+      return;
+    }
+
     const share = event.target.closest('#shareEmergency');
     if (!share) return;
     event.preventDefault();
