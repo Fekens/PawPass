@@ -11,11 +11,12 @@
       <div class="auth-logo"><span class="brand-mark">P</span></div>
       <p class="eyebrow centered">YOUR PROFILE</p>
       <h2>Edit profile</h2>
-      <p>Update the name shown throughout PawPass.</p>
+      <p>Update the details shown throughout PawPass.</p>
       <form id="profileEditForm">
         <label>Your name<input name="name" maxlength="80" required autocomplete="name"></label>
         <label>Email address<input name="email" type="email" readonly aria-readonly="true"></label>
-        <p class="field-help">Your login email stays unchanged.</p>
+        <label>Emergency contact phone<input name="emergencyPhone" type="tel" maxlength="30" autocomplete="tel" placeholder="e.g. (407) 555-1234"></label>
+        <p class="field-help">Your login email stays unchanged. Your emergency phone is shown only on a lost-pet profile you choose to share.</p>
         <p id="profileEditError" class="form-error" role="alert"></p>
         <button class="btn btn-primary btn-block" type="submit">Save changes →</button>
       </form>`;
@@ -29,6 +30,7 @@
       event.preventDefault();
       const form = event.currentTarget;
       const name = form.elements.name.value.trim();
+      const emergencyPhone = form.elements.emergencyPhone.value.trim();
       const error = dialog.querySelector('#profileEditError');
       error.textContent = '';
       if (!name) {
@@ -36,7 +38,7 @@
         return;
       }
       try {
-        state.user = { ...(state.user || {}), name };
+        state.user = { ...(state.user || {}), name, emergencyPhone };
         save();
         render();
         dialog.close();
@@ -123,6 +125,7 @@
       const form = dialog.querySelector('#profileEditForm');
       form.elements.name.value = state.user?.name || '';
       form.elements.email.value = state.user?.email || '';
+      form.elements.emergencyPhone.value = state.user?.emergencyPhone || '';
       dialog.querySelector('#profileEditError').textContent = '';
       dialog.showModal();
       return;
