@@ -12,13 +12,17 @@ window.PawPassBackend = (() => {
   const setMode = value => { mode = value; localStorage.setItem("pawpass-mode", value); };
   const assertCloud = () => { if (!client) throw new Error("Production accounts are not configured. Use Explore the demo or configure Supabase."); };
   const message = error => { throw new Error(error?.message || "PawPass could not reach the server."); };
+  const recoveryRequested = () => new URLSearchParams(location.search).get("type") === "recovery" || location.hash.includes("type=recovery");
 
   async function init() {
     if (demo()) return { mode, user: null, data: null };
     if (!client) return { mode, user: null, data: null };
     const { data, error } = await client.auth.getSession(); if (error) message(error);
     user = data.session?.user || null;
-    return { mode, user, data: user ? await load() : null };
+    // A recovery session only needs Supabase Auth. Do not query PawPass tables
+    // until after the password has been changed; this prevents recovery links
+    // from being blocked by unrelated table/RLS permissions.
+    return { mode, user, data: user && !recoveryRequested() ? await load() : null };
   }
   async function signUp(name, email, password) {
     assertCloud(); setMode("cloud");
@@ -31,8 +35,20 @@ window.PawPassBackend = (() => {
     if (error) message(error); user = data.user; return data;
   }
   async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; }
-  async function forgot(email) { assertCloud(); const redirectTo = `${location.origin}${location.pathname}`; const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo }); if (error) message(error); }
-  async function resetPassword(password) { assertCloud(); const { error } = await client.auth.updateUser({ password }); if (error) message(error); }
+  async function forgot(email) {
+    assertCloud();
+    // Keep an explicit recovery marker in the query string. Supabase may use
+    // the URL fragment for auth tokens, so the query marker remains reliable.
+    const redirectTo = `${location.origin}${location.pathname}?type=recovery`;
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) message(error);
+  }
+  async function resetPassword(password) {
+    assertCloud();
+    const { error } = await client.auth.updateUser({ password });
+    if (error) message(error);
+    history.replaceState(null, "", location.pathname);
+  }
 
   async function load() {
     const tables = ["profiles", "user_settings", "pets", "health_records", "schedules", "emergency_data"];
