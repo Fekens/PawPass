@@ -29,6 +29,11 @@ jobs:
           printf 'window.PAWPASS_CONFIG = {supabaseUrl: %s, supabasePublishableKey: %s};\n' \
             "$(jq -Rn --arg v "$SUPABASE_URL" '$v')" \
             "$(jq -Rn --arg v "$SUPABASE_PUBLISHABLE_KEY" '$v')" > config.js
+      - name: Enable navigation fallback
+        run: |
+          if ! grep -q 'navigation-fix.js' index.html; then
+            sed -i 's#  <script src="app.js"></script>#  <script src="app.js"></script>\n  <script src="navigation-fix.js"></script>#' index.html
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
