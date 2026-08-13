@@ -76,6 +76,14 @@
     const welcome = document.getElementById('welcome');
     if (!welcome) return false;
 
+    const ownerPhone = String(payload.ownerPhone || '').trim();
+    const phoneHref = ownerPhone.replace(/[^\d+]/g, '');
+    const contactActions = phoneHref ? `
+      <div class="public-lost-actions">
+        <a class="public-lost-action public-lost-call" href="tel:${safe(phoneHref)}">☎ Call Owner</a>
+        <a class="public-lost-action public-lost-text" href="sms:${safe(phoneHref)}">✉ Text Owner</a>
+      </div>` : '';
+
     document.title = `${pet.name || 'Lost pet'} — PawPass emergency profile`;
     welcome.classList.remove('hidden');
     welcome.innerHTML = `
@@ -90,9 +98,10 @@
               <p>${safe([pet.breed, pet.age, pet.sex].filter(Boolean).join(' · '))}</p>
             </div>
           </div>
+          ${contactActions}
           <div class="public-lost-details">
             <div><small>OWNER</small><b>${safe(payload.owner || 'Pet owner')}</b></div>
-            <div><small>OWNER CONTACT</small><b>${safe(payload.ownerPhone || 'Not provided')}</b></div>
+            <div><small>OWNER CONTACT</small><b>${safe(ownerPhone || 'Not provided')}</b></div>
             <div><small>VETERINARIAN</small><b>${safe(pet.vetPhone || pet.vetName || 'Not provided')}</b></div>
             <div><small>MICROCHIP</small><b>${safe(pet.microchip || 'Not provided')}</b></div>
             <div><small>ALLERGIES</small><b>${safe(pet.allergies || 'None listed')}</b></div>
@@ -116,9 +125,10 @@
         .public-lost-card{width:min(760px,100%);background:#fff;border-radius:28px;padding:32px;box-shadow:0 18px 50px rgba(36,58,64,.12)}
         .public-lost-hero{display:flex;gap:22px;align-items:center;margin:18px 0 28px}.public-lost-hero h1{font-size:38px;margin:0 0 6px}.public-lost-hero p{margin:0;color:#708086}
         .public-lost-pet{width:126px;height:126px;border-radius:26px;background:#f5cf78;display:grid;place-items:center;font-size:70px;flex:0 0 auto}
+        .public-lost-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}.public-lost-action{min-height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;text-decoration:none;font-size:16px;padding:12px 16px}.public-lost-call{background:#243a40;color:#fff}.public-lost-text{background:#f4b8c4;color:#243a40}
         .public-lost-details{display:grid;grid-template-columns:1fr 1fr;gap:12px}.public-lost-details>div{background:#eef7f6;border-radius:16px;padding:16px}.public-lost-details small,.public-lost-notes small{display:block;font-size:11px;letter-spacing:.12em;color:#71868b;margin-bottom:5px}.public-lost-details b{overflow-wrap:anywhere}
         .public-lost-notes{margin-top:18px;border-top:1px solid #e6e8e5;padding-top:18px}.public-lost-notes p{line-height:1.6;margin-bottom:0}.public-lost-footnote{font-size:12px;color:#839095;margin:24px 0 0}.public-lost-home{margin-top:20px;text-decoration:none}
-        @media(max-width:560px){.public-lost-card{padding:24px 18px}.public-lost-hero{align-items:flex-start}.public-lost-pet{width:92px;height:92px;font-size:50px}.public-lost-hero h1{font-size:30px}.public-lost-details{grid-template-columns:1fr}}
+        @media(max-width:560px){.public-lost-card{padding:24px 18px}.public-lost-hero{align-items:flex-start}.public-lost-pet{width:92px;height:92px;font-size:50px}.public-lost-hero h1{font-size:30px}.public-lost-actions,.public-lost-details{grid-template-columns:1fr}}
       `;
       document.head.appendChild(style);
     }
