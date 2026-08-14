@@ -8,6 +8,7 @@ window.PawPassBackend = (() => {
   }) : null;
   let mode = localStorage.getItem("pawpass-mode") || "cloud";
   let user = null;
+  let syncQueue = Promise.resolve();
   const demo = () => mode === "demo";
   const setMode = value => { mode = value; localStorage.setItem("pawpass-mode", value); };
   const assertCloud = () => { if (!client) throw new Error("Production accounts are not configured. Use Explore the demo or configure Supabase."); };
@@ -50,25 +51,26 @@ window.PawPassBackend = (() => {
     const results = await Promise.all(tables.map(table => client.from(table).select("*").then(({data,error}) => { if(error) message(error); return data; })));
     const [profiles, settings, pets, records, tasks, emergency] = results;
     const profile = profiles[0] || {};
-    const emergencyPhone = emergency.find(e => e.contact_phone)?.contact_phone || "";
+    const emergencyPhone = profile.emergency_phone || emergency.find(e => e.contact_phone)?.contact_phone || "";
     return {
       user: { name: profile.name || user.user_metadata?.name || "Pet parent", email: user.email, emergencyPhone },
       selectedPetId: settings[0]?.selected_pet_id || pets[0]?.id || null,
       lastView: settings[0]?.last_view || "dashboard",
-      pets: pets.map(p => ({ id:p.id,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age,weight:p.weight,birthday:p.birthday,sex:p.sex,photo:p.photo_url||"",microchip:p.microchip||"",allergies:p.allergies||"",medications:p.medications||"",vetName:p.vet_name||"",vetPhone:p.vet_phone||"",medicalNotes:p.medical_notes||"",status:p.status })),
+      preferences: settings[0]?.preferences || {},
+      pets: pets.map(p => ({ id:p.id,publicId:p.public_id,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age,weight:p.weight,birthday:p.birthday,sex:p.sex,photo:p.photo_url||"",microchip:p.microchip||"",allergies:p.allergies||"",medications:p.medications||"",vetName:p.vet_name||"",vetPhone:p.vet_phone||"",medicalNotes:p.medical_notes||"",status:p.status })),
       records: records.map(r => ({ id:r.id,petId:r.pet_id,type:r.record_type,title:r.title,date:r.record_date,notes:r.notes })),
       tasks: tasks.map(t => ({ id:t.id,petId:t.pet_id,type:t.schedule_type,title:t.title,date:t.display_date,time:t.display_time,scheduledAt:t.scheduled_at,notes:t.notes,done:t.done })),
       emergency: Object.fromEntries(emergency.map(e => [e.pet_id, { contactName:e.contact_name,contactPhone:e.contact_phone,notes:e.notes }]))
     };
   }
-  async function sync(state) {
+  async function syncNow(state) {
     if (demo() || !client || !user) return;
     const uid=user.id, petIds=state.pets.map(p=>p.id);
-    const petResult = state.pets.length ? await client.from("pets").upsert(state.pets.map(p=>({id:p.id,user_id:uid,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age||null,weight:p.weight,birthday:p.birthday||null,sex:p.sex,photo_url:p.photo||null,microchip:p.microchip||null,allergies:p.allergies||null,medications:p.medications||null,vet_name:p.vetName||null,vet_phone:p.vetPhone||null,medical_notes:p.medicalNotes||null,status:p.status}))) : {};
+    const petResult = state.pets.length ? await client.from("pets").upsert(state.pets.map(p=>({id:p.id,public_id:p.publicId,user_id:uid,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age||null,weight:p.weight,birthday:p.birthday||null,sex:p.sex,photo_url:p.photo||null,microchip:p.microchip||null,allergies:p.allergies||null,medications:p.medications||null,vet_name:p.vetName||null,vet_phone:p.vetPhone||null,medical_notes:p.medicalNotes||null,status:p.status}))) : {};
     if (petResult.error) message(petResult.error);
     const operations = [
-      client.from("profiles").upsert({id:uid,name:state.user.name}),
-      client.from("user_settings").upsert({user_id:uid,selected_pet_id:state.selectedPetId||null,last_view:state.lastView||"dashboard"}),
+      client.from("profiles").upsert({id:uid,name:state.user.name,emergency_phone:state.user.emergencyPhone||null}),
+      client.from("user_settings").upsert({user_id:uid,selected_pet_id:state.selectedPetId||null,last_view:state.lastView||"dashboard",preferences:state.preferences||{}}),
       state.records.length ? client.from("health_records").upsert(state.records.map(r=>({id:r.id,user_id:uid,pet_id:r.petId,record_type:r.type,title:r.title,record_date:r.date,notes:r.notes}))) : Promise.resolve({}),
       state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,display_time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
       state.pets.length ? client.from("emergency_data").upsert(state.pets.map(p=>({pet_id:p.id,user_id:uid,contact_name:state.user.name,contact_phone:state.user.emergencyPhone||null,notes:p.medicalNotes||null}))) : Promise.resolve({})
@@ -78,6 +80,19 @@ window.PawPassBackend = (() => {
       const local = table==="pets"?petIds:(table==="health_records"?state.records:state.tasks).map(x=>x.id);
       let q=client.from(table).delete().eq("user_id",uid); if(local.length) q=q.not("id","in",`(${local.join(",")})`); return q;
     })); const cleanupFailure=cleanup.find(x=>x.error); if(cleanupFailure) message(cleanupFailure.error);
+  }
+  function sync(state) {
+    if (demo() || !client || !user) return Promise.resolve();
+    const snapshot = structuredClone(state);
+    syncQueue = syncQueue.catch(() => {}).then(() => syncNow(snapshot));
+    return syncQueue;
+  }
+  async function loadPublicPet(publicId) {
+    assertCloud();
+    const { data, error } = await client.rpc("get_public_pet", { lookup_id: publicId });
+    if (error) message(error);
+    if (!data?.length) throw new Error("This pet profile is unavailable.");
+    return data[0];
   }
   async function markPetHome(petId) {
     if (demo()) return;
@@ -93,5 +108,5 @@ window.PawPassBackend = (() => {
     if (error) message(error);
     if (!data?.length) throw new Error("Only this pet's owner can mark the pet as home.");
   }
-  return { configured, demo, setMode, init, signUp, signIn, signOut, forgot, resetPassword, sync, markPetHome, client };
+  return { configured, demo, setMode, init, signUp, signIn, signOut, forgot, resetPassword, sync, markPetHome, loadPublicPet, client };
 })();

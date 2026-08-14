@@ -6,13 +6,14 @@ PawPass is a mobile-first pet-care dashboard with production accounts backed by 
 
 - **Production mode:** Supabase Auth handles password hashing, sessions, email verification, logout, and password recovery. PostgreSQL stores profiles, pets, the selected pet, health records, schedules, emergency data, and settings.
 - **Tenant isolation:** every application table has Row Level Security (RLS). Policies compare `auth.uid()` with the row owner and also validate each child row's pet ownership. The browser never receives a service-role key.
+- **Public QR profiles:** production QR links contain an unguessable pet UUID, not embedded private account data. A narrowly scoped `get_public_pet` database function returns only the finder-facing owner contact, pet identity, emergency care, and reunion fields. It never returns account email, health history, schedules, or settings. Existing self-contained demo/legacy links remain readable for backward compatibility; generate a new production QR tag to receive live updates.
 - **Demo mode:** **Explore the demo** explicitly selects local mode and uses the existing `pawpass-data` localStorage content. Demo data is not uploaded and is not an account.
 - The Supabase publishable/legacy anon key is safe to expose to a browser **only with RLS enabled**. Treat the service-role key as a secret and never add it to this repository or frontend.
 
 ## Supabase setup (production)
 
 1. Create a project at Supabase and save the **Project URL** and **Publishable key** (or legacy `anon` key) from **Project Settings → API**. Do not use the service-role key.
-2. Open **SQL Editor**, paste [`supabase/migrations/20260812000000_pawpass_schema.sql`](supabase/migrations/20260812000000_pawpass_schema.sql), and select **Run**. This creates `profiles`, `pets`, `user_settings`, `health_records`, `schedules`, and `emergency_data`, indexes, ownership policies, and the new-user profile trigger.
+2. Open **SQL Editor** and run both files in [`supabase/migrations`](supabase/migrations) in filename order. The first creates the private tables, indexes, ownership policies, and new-user trigger. The second adds stable public QR identifiers, account preferences, emergency contact storage, and the intentionally limited public lookup function. Existing installations should run only migrations they have not already applied.
 3. In **Authentication → URL Configuration**, set **Site URL** to the deployed Pages URL, for example `https://OWNER.github.io/PawPass/`.
 4. Add that exact URL and the local URL `http://localhost:4173/` to **Redirect URLs**. Password-reset links return to one of these allow-listed URLs.
 5. In **Authentication → Providers → Email**, leave Email enabled. For production, keep **Confirm email** enabled and configure a custom SMTP provider under **Authentication → SMTP Settings**; Supabase's default sender is rate-limited and intended only for trials.
@@ -65,6 +66,7 @@ Use two private/incognito browser profiles against the configured deployment:
 4. In the second browser profile, log into the same account and confirm the pet and records appear. Then register a different account and confirm the first account's pets do not appear.
 5. On Login choose **Forgot your password?**, follow the email link, set a new password, log out, and log in with the new password.
 6. Choose **Explore the demo**, edit sample content, refresh, and confirm demo persistence. Confirm **Reset demo data** affects only local demo data.
+7. Create a QR tag for a production pet and open it in a logged-out/private browser. Confirm Call Owner, Text Owner, Report Pet Found, and optional current-location sharing. Change the owner's emergency phone and reload the same link; then mark the pet home and confirm the same link shows the reunion state and no longer offers found reporting.
 
 Automated static checks cannot deliver authentication email or create real accounts without a configured Supabase project. Complete the browser checklist after configuring the deployment; inspect Supabase **Authentication → Users** and Table Editor to confirm persisted ownership.
 

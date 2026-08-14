@@ -83,11 +83,32 @@
   }
 
   function publicUrl() {
-    const payload = publicPayload();
-    if (!payload) return null;
+    const pet = selectedPet();
+    if (!pet) return null;
     const url = new URL(location.origin + location.pathname);
-    url.searchParams.set(paramName, encodePayload(payload));
+    // Cloud links contain only an unguessable public identifier. The backend
+    // supplies the current finder-safe fields, so reunion/contact updates also
+    // apply to QR tags already in circulation. Demo links retain the legacy
+    // self-contained payload and never upload local demo data.
+    if (!PawPassBackend.demo() && pet.publicId) url.searchParams.set('pet', pet.publicId);
+    else url.searchParams.set(paramName, encodePayload(publicPayload()));
     return url.toString();
+  }
+
+  function backendPayload(row) {
+    return { v: 4, owner: row.owner_name, ownerPhone: row.owner_phone, pet: {
+      name: row.name, status: row.status, photo: row.photo_url, animal: row.animal,
+      breed: row.breed, age: row.age, birthday: row.birthday, sex: row.sex,
+      microchip: row.microchip, allergies: row.allergies, medications: row.medications,
+      vetName: row.vet_name, vetPhone: row.vet_phone, notes: row.emergency_notes
+    }};
+  }
+
+  function renderPublicState(title, detail) {
+    document.getElementById('app')?.classList.add('hidden');
+    const welcome = document.getElementById('welcome');
+    welcome.classList.remove('hidden');
+    welcome.innerHTML = `<main class="public-lost-wrap"><header class="public-lost-brand"><span class="brand-mark">P</span><b>PawPass</b></header><section class="public-lost-card" role="status"><h1>${safe(title)}</h1><p>${safe(detail)}</p></section></main>`;
   }
 
   function renderPublicProfile(payload) {
@@ -345,8 +366,23 @@
     dialog.showModal();
   }
 
-  const publicToken = new URLSearchParams(location.search).get(paramName);
-  if (publicToken) {
+  const query = new URLSearchParams(location.search);
+  const publicPetId = query.get('pet');
+  const publicToken = query.get(paramName);
+  if (publicPetId) {
+    const show = async () => {
+      renderPublicState('Loading pet profile…', 'Getting the latest emergency information.');
+      try {
+        const row = await PawPassBackend.loadPublicPet(publicPetId);
+        renderPublicProfile(backendPayload(row));
+      } catch (error) {
+        renderPublicState('Profile unavailable', error.message || 'This pet profile could not be loaded.');
+      }
+    };
+    try { enterApp = show; } catch {}
+    try { render = show; } catch {}
+    show();
+  } else if (publicToken) {
     const payload = decodePayload(publicToken);
     if ([1, 2, 3].includes(payload?.v) && payload.pet) {
       const show = () => renderPublicProfile(payload);
