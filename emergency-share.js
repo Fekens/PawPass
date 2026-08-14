@@ -35,19 +35,6 @@
     return `sms:${recipient}${separator}body=${encodeURIComponent(message)}`;
   }
 
-  function openSmsComposer(recipient, message) {
-    // Following a real link from the submit gesture is handled more reliably
-    // than assigning location.href, particularly by mobile Safari and browsers
-    // with an installed desktop SMS protocol handler.
-    const link = document.createElement('a');
-    link.href = smsUrl(recipient, message);
-    link.hidden = true;
-    link.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
   function foundReportMessage(petName, finderName, finderPhone, message, finderLocation) {
     return [
       `Pet found: ${petName || 'your pet'}`,
@@ -166,8 +153,8 @@
             <p id="finderLocationStatus" role="status" aria-live="polite">Location is optional.</p>
           </div>
           <p class="public-found-error" id="foundPetError" role="alert"></p>
-          <button class="public-found-submit" type="submit">Continue to send report →</button>
-          <p class="public-found-privacy">PawPass will open your text app with this report. Nothing is stored on this device or shared until you send it.</p>
+          <a class="public-found-submit" id="sendFoundReport" href="${safe(smsUrl(phoneHref, `Pet found: ${pet.name || 'your pet'}`))}">Continue to send report →</a>
+          <p class="public-found-privacy" id="foundPetSendHelp" role="status" aria-live="polite">PawPass will open your text app with this report. Nothing is stored on this device or shared until you send it.</p>
         </form>
       </dialog>`;
 
@@ -184,7 +171,7 @@
         .public-lost-found{width:100%;min-height:58px;border:0;border-radius:16px;background:#f5cf78;color:#243a40;font:800 16px 'DM Sans',sans-serif;margin:0 0 22px;cursor:pointer}
         .public-lost-details{display:grid;grid-template-columns:1fr 1fr;gap:12px}.public-lost-details>div{background:#eef7f6;border-radius:16px;padding:16px}.public-lost-details small,.public-lost-notes small{display:block;font-size:11px;letter-spacing:.12em;color:#71868b;margin-bottom:5px}.public-lost-details b{overflow-wrap:anywhere}
         .public-lost-notes{margin-top:18px;border-top:1px solid #e6e8e5;padding-top:18px}.public-lost-notes p{line-height:1.6;margin-bottom:0}.public-lost-footnote{font-size:12px;color:#839095;margin:24px 0 0}.public-lost-home{margin-top:20px;text-decoration:none}
-        .public-found-dialog{width:min(520px,calc(100% - 28px));max-height:calc(100vh - 28px);overflow:auto;border:0;border-radius:26px;padding:30px;color:#243a40;box-shadow:0 24px 70px rgba(23,55,47,.3)}.public-found-dialog::backdrop{background:rgba(23,55,47,.78);backdrop-filter:blur(4px)}.public-found-dialog h2{font:800 28px Manrope;margin:7px 0}.public-found-intro{color:#708086;line-height:1.5;margin:0 0 20px}.public-found-close{position:absolute;right:16px;top:14px;width:34px;height:34px;border:0;border-radius:50%;font-size:22px;background:#f1f0ea;color:#243a40}.public-found-dialog form{display:grid;gap:15px}.public-found-dialog label{font-size:12px;font-weight:800}.public-found-dialog label>span{font-weight:500;color:#82908c}.public-found-dialog input,.public-found-dialog textarea{display:block;width:100%;margin-top:7px;border:1px solid #d9ddd7;border-radius:13px;padding:13px;background:#fbfaf6;color:#243a40;font:inherit}.public-found-dialog textarea{resize:vertical}.public-found-dialog label>small{display:block;text-align:right;color:#82908c;margin-top:4px}.public-location-row{border:1px solid #dce8e4;background:#eef7f6;border-radius:14px;padding:12px}.public-location-button{border:0;background:transparent;color:#315f54;font-weight:800;padding:2px;cursor:pointer}.public-location-button:disabled{opacity:.6}.public-location-row p{font-size:11px;color:#708086;margin:7px 2px 0}.public-found-error{min-height:16px;color:#b54438;font-size:12px;margin:0}.public-found-submit{min-height:54px;border:0;border-radius:15px;background:#243a40;color:#fff;font-weight:800;font-size:15px}.public-found-privacy{color:#82908c;font-size:11px;line-height:1.45;text-align:center;margin:0}
+        .public-found-dialog{width:min(520px,calc(100% - 28px));max-height:calc(100vh - 28px);overflow:auto;border:0;border-radius:26px;padding:30px;color:#243a40;box-shadow:0 24px 70px rgba(23,55,47,.3)}.public-found-dialog::backdrop{background:rgba(23,55,47,.78);backdrop-filter:blur(4px)}.public-found-dialog h2{font:800 28px Manrope;margin:7px 0}.public-found-intro{color:#708086;line-height:1.5;margin:0 0 20px}.public-found-close{position:absolute;right:16px;top:14px;width:34px;height:34px;border:0;border-radius:50%;font-size:22px;background:#f1f0ea;color:#243a40}.public-found-dialog form{display:grid;gap:15px}.public-found-dialog label{font-size:12px;font-weight:800}.public-found-dialog label>span{font-weight:500;color:#82908c}.public-found-dialog input,.public-found-dialog textarea{display:block;width:100%;margin-top:7px;border:1px solid #d9ddd7;border-radius:13px;padding:13px;background:#fbfaf6;color:#243a40;font:inherit}.public-found-dialog textarea{resize:vertical}.public-found-dialog label>small{display:block;text-align:right;color:#82908c;margin-top:4px}.public-location-row{border:1px solid #dce8e4;background:#eef7f6;border-radius:14px;padding:12px}.public-location-button{border:0;background:transparent;color:#315f54;font-weight:800;padding:2px;cursor:pointer}.public-location-button:disabled{opacity:.6}.public-location-row p{font-size:11px;color:#708086;margin:7px 2px 0}.public-found-error{min-height:16px;color:#b54438;font-size:12px;margin:0}.public-found-submit{min-height:54px;border:0;border-radius:15px;background:#243a40;color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;padding:0 16px;cursor:pointer}.public-found-privacy{color:#82908c;font-size:11px;line-height:1.45;text-align:center;margin:0}
         @media(max-width:560px){.public-lost-wrap{padding:20px 12px 40px}.public-lost-card{padding:24px 18px}.public-lost-hero{align-items:flex-start}.public-lost-pet{width:92px;height:92px;font-size:50px}.public-lost-hero h1{font-size:30px}.public-lost-actions,.public-lost-details{grid-template-columns:1fr}.public-found-dialog{padding:28px 20px 22px}}
       `;
       document.head.appendChild(style);
@@ -192,6 +179,8 @@
 
     const dialog = document.getElementById('foundPetDialog');
     const form = document.getElementById('foundPetForm');
+    const sendLink = document.getElementById('sendFoundReport');
+    const sendHelp = document.getElementById('foundPetSendHelp');
     let finderLocation = null;
     document.getElementById('reportPetFound')?.addEventListener('click', () => dialog.showModal());
     dialog.querySelector('.public-found-close').addEventListener('click', () => dialog.close());
@@ -223,18 +212,33 @@
         button.disabled = false;
       }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
     });
-    form.addEventListener('submit', event => {
-      event.preventDefault();
+    function prepareFoundReport(event) {
       const data = new FormData(form);
       const name = String(data.get('finderName') || '').trim();
       const finderPhone = String(data.get('finderPhone') || '').trim();
       const message = String(data.get('message') || '').trim();
       if (!message) {
+        event?.preventDefault();
         document.getElementById('foundPetError').textContent = 'Please add a short message for the owner.';
         form.elements.message.focus();
-        return;
+        return false;
       }
-      openSmsComposer(phoneHref, foundReportMessage(pet.name, name, finderPhone, message, finderLocation));
+      document.getElementById('foundPetError').textContent = '';
+      sendLink.href = smsUrl(phoneHref, foundReportMessage(pet.name, name, finderPhone, message, finderLocation));
+      sendHelp.textContent = 'Opening your text app… If no app opens, your browser or device has no SMS handler configured. You can still use Call Owner or Text Owner above.';
+      return true;
+    }
+    // Keep this as a visible, genuine sms: link. A synthetic link.click() can be
+    // rejected as an external-protocol launch by mobile and desktop browsers.
+    sendLink.addEventListener('click', event => {
+      prepareFoundReport(event);
+    });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!prepareFoundReport(event)) return;
+      // Enter-key submission has no anchor default action. Pointer and touch
+      // users follow the native link above, the most reliable SMS launch path.
+      window.location.href = sendLink.href;
     });
     return true;
   }
