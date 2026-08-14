@@ -79,5 +79,19 @@ window.PawPassBackend = (() => {
       let q=client.from(table).delete().eq("user_id",uid); if(local.length) q=q.not("id","in",`(${local.join(",")})`); return q;
     })); const cleanupFailure=cleanup.find(x=>x.error); if(cleanupFailure) message(cleanupFailure.error);
   }
-  return { configured, demo, setMode, init, signUp, signIn, signOut, forgot, resetPassword, sync, client };
+  async function markPetHome(petId) {
+    if (demo()) return;
+    assertCloud();
+    if (!user) throw new Error("Log in as the pet owner to mark this pet as home.");
+    // Update only the owner's status column. Photos, medical details, emergency
+    // data, QR source information, schedules, and health records are untouched.
+    const { data, error } = await client.from("pets")
+      .update({ status: "Home" })
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .select("id");
+    if (error) message(error);
+    if (!data?.length) throw new Error("Only this pet's owner can mark the pet as home.");
+  }
+  return { configured, demo, setMode, init, signUp, signIn, signOut, forgot, resetPassword, sync, markPetHome, client };
 })();
