@@ -25,6 +25,40 @@
     }[char]));
   }
 
+  function smsUrl(recipient, message) {
+    // Apple Messages uses an ampersand for the first SMS parameter, while
+    // Android and desktop protocol handlers use the standard query marker.
+    // iPadOS can identify itself as a Macintosh, so include touch capability.
+    const appleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    const separator = appleMobile ? '&' : '?';
+    return `sms:${recipient}${separator}body=${encodeURIComponent(message)}`;
+  }
+
+  function openSmsComposer(recipient, message) {
+    // Following a real link from the submit gesture is handled more reliably
+    // than assigning location.href, particularly by mobile Safari and browsers
+    // with an installed desktop SMS protocol handler.
+    const link = document.createElement('a');
+    link.href = smsUrl(recipient, message);
+    link.hidden = true;
+    link.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  function foundReportMessage(petName, finderName, finderPhone, message, finderLocation) {
+    return [
+      `Pet found: ${petName || 'your pet'}`,
+      finderName ? `Finder name: ${finderName}` : '',
+      finderPhone ? `Finder phone: ${finderPhone}` : '',
+      `Message: ${message}`,
+      finderLocation ? `Current location: https://maps.google.com/?q=${finderLocation.latitude},${finderLocation.longitude}` : '',
+      'Sent from the PawPass lost-pet profile.'
+    ].filter(Boolean).join('\n');
+  }
+
   function petAge(pet) {
     if (pet.age) return pet.age;
     if (!pet.birthday) return 'Age unknown';
@@ -200,15 +234,7 @@
         form.elements.message.focus();
         return;
       }
-      const lines = [
-        `I found ${pet.name || 'your pet'}.`,
-        message,
-        name ? `Finder name: ${name}` : '',
-        finderPhone ? `Finder phone: ${finderPhone}` : '',
-        finderLocation ? `Current location: https://maps.google.com/?q=${finderLocation.latitude},${finderLocation.longitude}` : '',
-        'Sent from the PawPass lost-pet profile.'
-      ].filter(Boolean);
-      location.href = `sms:${phoneHref}?body=${encodeURIComponent(lines.join('\n'))}`;
+      openSmsComposer(phoneHref, foundReportMessage(pet.name, name, finderPhone, message, finderLocation));
     });
     return true;
   }
