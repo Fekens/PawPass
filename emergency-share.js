@@ -83,6 +83,8 @@
         <a class="public-lost-action public-lost-call" href="tel:${safe(phoneHref)}">☎ Call Owner</a>
         <a class="public-lost-action public-lost-text" href="sms:${safe(phoneHref)}">✉ Text Owner</a>
       </div>` : '';
+    const foundAction = phoneHref ? `
+      <button class="public-lost-found" id="reportPetFound" type="button">⌖ Report Pet Found</button>` : '';
 
     document.title = `${pet.name || 'Lost pet'} — PawPass emergency profile`;
     welcome.classList.remove('hidden');
@@ -99,6 +101,7 @@
             </div>
           </div>
           ${contactActions}
+          ${foundAction}
           <div class="public-lost-details">
             <div><small>OWNER</small><b>${safe(payload.owner || 'Pet owner')}</b></div>
             <div><small>OWNER CONTACT</small><b>${safe(ownerPhone || 'Not provided')}</b></div>
@@ -114,7 +117,25 @@
           <p class="public-lost-footnote">This public emergency profile was shared from PawPass by the pet owner.</p>
         </section>
         <a class="btn btn-dark public-lost-home" href="${safe(location.origin + location.pathname)}">Visit PawPass</a>
-      </main>`;
+      </main>
+      <dialog class="public-found-dialog" id="foundPetDialog" aria-labelledby="foundPetTitle">
+        <button class="public-found-close" type="button" aria-label="Close report form">×</button>
+        <p class="eyebrow">HELP ${safe(String(pet.name || 'THIS PET').toUpperCase())} GET HOME</p>
+        <h2 id="foundPetTitle">Report pet found</h2>
+        <p class="public-found-intro">Share a quick update with the owner. Your details are optional and are only added to the text you send.</p>
+        <form id="foundPetForm">
+          <label>Your name <span>Optional</span><input name="finderName" maxlength="80" autocomplete="name" placeholder="Your name"></label>
+          <label>Your phone number <span>Optional</span><input name="finderPhone" type="tel" maxlength="30" autocomplete="tel" inputmode="tel" placeholder="So the owner can reach you"></label>
+          <label>Message <textarea name="message" required maxlength="300" rows="4" placeholder="Where is the pet now? Are they safe?"></textarea><small>Up to 300 characters</small></label>
+          <div class="public-location-row">
+            <button class="public-location-button" id="useFinderLocation" type="button">⌖ Use my current location</button>
+            <p id="finderLocationStatus" role="status" aria-live="polite">Location is optional.</p>
+          </div>
+          <p class="public-found-error" id="foundPetError" role="alert"></p>
+          <button class="public-found-submit" type="submit">Continue to send report →</button>
+          <p class="public-found-privacy">PawPass will open your text app with this report. Nothing is stored on this device or shared until you send it.</p>
+        </form>
+      </dialog>`;
 
     if (!document.getElementById('publicLostStyles')) {
       const style = document.createElement('style');
@@ -126,12 +147,69 @@
         .public-lost-hero{display:flex;gap:22px;align-items:center;margin:18px 0 28px}.public-lost-hero h1{font-size:38px;margin:0 0 6px}.public-lost-hero p{margin:0;color:#708086}
         .public-lost-pet{width:126px;height:126px;border-radius:26px;background:#f5cf78;display:grid;place-items:center;font-size:70px;flex:0 0 auto}
         .public-lost-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}.public-lost-action{min-height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;text-decoration:none;font-size:16px;padding:12px 16px}.public-lost-call{background:#243a40;color:#fff}.public-lost-text{background:#f4b8c4;color:#243a40}
+        .public-lost-found{width:100%;min-height:58px;border:0;border-radius:16px;background:#f5cf78;color:#243a40;font:800 16px 'DM Sans',sans-serif;margin:0 0 22px;cursor:pointer}
         .public-lost-details{display:grid;grid-template-columns:1fr 1fr;gap:12px}.public-lost-details>div{background:#eef7f6;border-radius:16px;padding:16px}.public-lost-details small,.public-lost-notes small{display:block;font-size:11px;letter-spacing:.12em;color:#71868b;margin-bottom:5px}.public-lost-details b{overflow-wrap:anywhere}
         .public-lost-notes{margin-top:18px;border-top:1px solid #e6e8e5;padding-top:18px}.public-lost-notes p{line-height:1.6;margin-bottom:0}.public-lost-footnote{font-size:12px;color:#839095;margin:24px 0 0}.public-lost-home{margin-top:20px;text-decoration:none}
-        @media(max-width:560px){.public-lost-card{padding:24px 18px}.public-lost-hero{align-items:flex-start}.public-lost-pet{width:92px;height:92px;font-size:50px}.public-lost-hero h1{font-size:30px}.public-lost-actions,.public-lost-details{grid-template-columns:1fr}}
+        .public-found-dialog{width:min(520px,calc(100% - 28px));max-height:calc(100vh - 28px);overflow:auto;border:0;border-radius:26px;padding:30px;color:#243a40;box-shadow:0 24px 70px rgba(23,55,47,.3)}.public-found-dialog::backdrop{background:rgba(23,55,47,.78);backdrop-filter:blur(4px)}.public-found-dialog h2{font:800 28px Manrope;margin:7px 0}.public-found-intro{color:#708086;line-height:1.5;margin:0 0 20px}.public-found-close{position:absolute;right:16px;top:14px;width:34px;height:34px;border:0;border-radius:50%;font-size:22px;background:#f1f0ea;color:#243a40}.public-found-dialog form{display:grid;gap:15px}.public-found-dialog label{font-size:12px;font-weight:800}.public-found-dialog label>span{font-weight:500;color:#82908c}.public-found-dialog input,.public-found-dialog textarea{display:block;width:100%;margin-top:7px;border:1px solid #d9ddd7;border-radius:13px;padding:13px;background:#fbfaf6;color:#243a40;font:inherit}.public-found-dialog textarea{resize:vertical}.public-found-dialog label>small{display:block;text-align:right;color:#82908c;margin-top:4px}.public-location-row{border:1px solid #dce8e4;background:#eef7f6;border-radius:14px;padding:12px}.public-location-button{border:0;background:transparent;color:#315f54;font-weight:800;padding:2px;cursor:pointer}.public-location-button:disabled{opacity:.6}.public-location-row p{font-size:11px;color:#708086;margin:7px 2px 0}.public-found-error{min-height:16px;color:#b54438;font-size:12px;margin:0}.public-found-submit{min-height:54px;border:0;border-radius:15px;background:#243a40;color:#fff;font-weight:800;font-size:15px}.public-found-privacy{color:#82908c;font-size:11px;line-height:1.45;text-align:center;margin:0}
+        @media(max-width:560px){.public-lost-wrap{padding:20px 12px 40px}.public-lost-card{padding:24px 18px}.public-lost-hero{align-items:flex-start}.public-lost-pet{width:92px;height:92px;font-size:50px}.public-lost-hero h1{font-size:30px}.public-lost-actions,.public-lost-details{grid-template-columns:1fr}.public-found-dialog{padding:28px 20px 22px}}
       `;
       document.head.appendChild(style);
     }
+
+    const dialog = document.getElementById('foundPetDialog');
+    const form = document.getElementById('foundPetForm');
+    let finderLocation = null;
+    document.getElementById('reportPetFound')?.addEventListener('click', () => dialog.showModal());
+    dialog.querySelector('.public-found-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+    document.getElementById('useFinderLocation').addEventListener('click', () => {
+      const button = document.getElementById('useFinderLocation');
+      const status = document.getElementById('finderLocationStatus');
+      const error = document.getElementById('foundPetError');
+      error.textContent = '';
+      if (!navigator.geolocation) {
+        error.textContent = 'Location is not available in this browser. You can still send the report.';
+        return;
+      }
+      button.disabled = true;
+      status.textContent = 'Finding your location…';
+      navigator.geolocation.getCurrentPosition(position => {
+        finderLocation = {
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6)
+        };
+        status.textContent = '✓ Current location added to your report.';
+        button.textContent = '⌖ Update my current location';
+        button.disabled = false;
+      }, () => {
+        error.textContent = 'We could not access your location. Check browser permission or describe the location in your message.';
+        status.textContent = 'Location was not added.';
+        button.disabled = false;
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+    });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const name = String(data.get('finderName') || '').trim();
+      const finderPhone = String(data.get('finderPhone') || '').trim();
+      const message = String(data.get('message') || '').trim();
+      if (!message) {
+        document.getElementById('foundPetError').textContent = 'Please add a short message for the owner.';
+        form.elements.message.focus();
+        return;
+      }
+      const lines = [
+        `I found ${pet.name || 'your pet'}.`,
+        message,
+        name ? `Finder name: ${name}` : '',
+        finderPhone ? `Finder phone: ${finderPhone}` : '',
+        finderLocation ? `Current location: https://maps.google.com/?q=${finderLocation.latitude},${finderLocation.longitude}` : '',
+        'Sent from the PawPass lost-pet profile.'
+      ].filter(Boolean);
+      location.href = `sms:${phoneHref}?body=${encodeURIComponent(lines.join('\n'))}`;
+    });
     return true;
   }
 
@@ -181,7 +259,7 @@
           <a class="btn btn-primary btn-block" href="${safe(qrImage)}" target="_blank" rel="noopener">Open / save QR code →</a>
           <button class="btn btn-dark btn-block" id="copyQrLink" type="button">Copy emergency link</button>
         </div>
-        <p class="field-help" style="margin-top:14px">If you change the owner contact or Milo's emergency details later, create and print a new QR tag.</p>
+        <p class="field-help" style="margin-top:14px">If you change the owner contact or ${safe(pet.name || 'your pet')}'s emergency details later, create and print a new QR tag.</p>
       </div>`;
     dialog.querySelector('.dialog-close').onclick = () => dialog.close();
     dialog.querySelector('#copyQrLink').onclick = async () => {
