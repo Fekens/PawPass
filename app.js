@@ -55,7 +55,10 @@ const toast = (message) => { const el=$("#toast"); el.textContent=message; el.cl
 const viewName = () => (location.hash.replace("#","") || state.lastView || "dashboard").toLowerCase();
 const esc = (text="") => String(text).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const selectedPet = () => state.pets.find(p=>String(p.id)===String(state.selectedPetId)) || state.pets[0];
-const isPetLost = pet => String(pet?.status || "").trim().toUpperCase() === "LOST";
+// Production data predates a single canonical lost label. Treat the values
+// already used by owner records as lost, then write the canonical Home value
+// when the owner completes the reunion workflow.
+const isPetLost = pet => ["LOST", "MISSING", "REPORTED LOST"].includes(String(pet?.status || "").trim().toUpperCase());
 const isPetHome = pet => ["HOME", "SAFE"].includes(String(pet?.status || "").trim().toUpperCase());
 const petVisual = p => p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name)}">` : esc(p.animal || speciesEmoji[p.species] || "🐾");
 
@@ -121,7 +124,7 @@ function openPetForm(id){
 }
 function updatePhotoPreview(photo, fallback="🐾"){ $("#photoPreview").innerHTML=photo?`<img src="${esc(photo)}" alt="Photo preview">`:esc(fallback||"🐾"); }
 
-document.addEventListener("click",e=>{
+document.addEventListener("click",async e=>{
   const auth=e.target.closest("[data-auth]"); if(auth) openAuth(auth.dataset.auth);
   if(e.target.closest("#demoBtn")){ PawPassBackend.setMode("demo"); state=readStoredData()||structuredClone(seed); normalizeState(); enterApp(); }
   const sw=e.target.closest("[data-switch]"); if(sw){ $("#authDialog").close(); openAuth(sw.dataset.switch); }
@@ -130,7 +133,7 @@ document.addEventListener("click",e=>{
   const add=e.target.closest("[data-add]"); if(add) openItem(add.dataset.add);
   const addPet=e.target.closest("[data-pet-add]"); if(addPet) openPetForm();
   const editPet=e.target.closest("[data-pet-edit]"); if(editPet){ e.stopPropagation(); openPetForm(editPet.dataset.petEdit); }
-  const markHome=e.target.closest("[data-mark-home]"); if(markHome){ e.stopPropagation(); const p=state.pets.find(x=>String(x.id)===markHome.dataset.markHome); if(p&&isPetLost(p)&&confirm(`Mark ${p.name} as home? The public profile will show that ${p.name} has been reunited and will no longer accept found reports.`)){ p.status="Home"; save(); render(); toast(`${p.name} is safe at home!`); } }
+  const markHome=e.target.closest("[data-mark-home]"); if(markHome){ e.stopPropagation(); const p=state.pets.find(x=>String(x.id)===markHome.dataset.markHome); if(p&&isPetLost(p)&&confirm(`Mark ${p.name} as home? The public profile will show that ${p.name} has been reunited and will no longer accept found reports.`)){ markHome.disabled=true; try { await PawPassBackend.markPetHome(p.id); p.status="Home"; if(PawPassBackend.demo()) save(); render(); toast(`${p.name} is safe at home!`); } catch(error) { markHome.disabled=false; toast(error.message); } } }
   const deletePet=e.target.closest("[data-pet-delete]"); if(deletePet){ e.stopPropagation(); const p=state.pets.find(x=>String(x.id)===deletePet.dataset.petDelete); if(p&&confirm(`Delete ${p.name}'s profile? This cannot be undone.`)){ state.pets=state.pets.filter(x=>x!==p); state.tasks=state.tasks.filter(x=>String(x.petId)!==String(p.id)); state.records=state.records.filter(x=>String(x.petId)!==String(p.id)); delete state.emergency?.[p.id]; if(String(state.selectedPetId)===String(p.id))state.selectedPetId=state.pets[0]?.id??null; save();render();toast(`${p.name}'s profile deleted`); } }
   const selectPet=e.target.closest("[data-pet-select]"); if(selectPet&&!editPet&&!deletePet){ state.selectedPetId=state.pets.find(p=>String(p.id)===selectPet.dataset.petSelect)?.id;save();render();toast(`${selectedPet().name} selected`); }
   const complete=e.target.closest("[data-complete]"); if(complete){ const t=state.tasks.find(x=>x.id==complete.dataset.complete); t.done=!t.done; save(); render(); toast(t.done?"Nice work — task complete!":"Task moved back to your list"); }
