@@ -29,7 +29,7 @@ let state = PawPassBackend.demo() ? (readStoredData() || structuredClone(seed)) 
 // key.  Some existing PawPass sessions on Pages have the data key but lost the
 // session key, which made a reload look like a logout.  The duplicated marker
 // also lets those sessions repair the standalone key without touching pet data.
-const hasSession = () => PawPassBackend.demo() && (state.authenticated === true || localStorage.getItem(sessionStorageKey) === "active");
+const hasDemoSession = () => PawPassBackend.demo() && (state.authenticated === true || localStorage.getItem(sessionStorageKey) === "active");
 const startSession = () => {
   state.authenticated = true;
   localStorage.setItem(sessionStorageKey, "active");
@@ -41,6 +41,7 @@ const endSession = () => {
   save();
 };
 let authMode = "signup";
+let appActive = false;
 const speciesEmoji = { dog:"🐕", cat:"🐈", bird:"🐦", other:"🐾" };
 if (!Array.isArray(state.pets)) state.pets=[];
 state.pets.forEach(p=>{ p.species ||= p.animal==="🐈"?"cat":p.animal==="🐦"?"bird":"dog"; p.animal ||= speciesEmoji[p.species]; });
@@ -73,11 +74,21 @@ function renderPetSwitcher(){
 }
 function enterApp(){
   if (PawPassBackend.demo()) startSession();
+  appActive = true;
+  $("#startupError").classList.add("hidden");
   $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden");
   const route=viewName();
-  if(!nav.some(n=>n.toLowerCase()===route)) location.hash="dashboard";
-  else if(!location.hash && route!=="dashboard") location.hash=route;
-  else render();
+  const safeRoute=nav.some(n=>n.toLowerCase()===route)?route:"dashboard";
+  if(location.hash!==`#${safeRoute}`) history.replaceState(null,"",`${location.pathname}${location.search}#${safeRoute}`);
+  render();
+}
+function returnToWelcome(message=""){
+  appActive = false;
+  $("#app").classList.add("hidden");
+  $("#welcome").classList.remove("hidden");
+  const error=$("#startupError");
+  error.textContent=message;
+  error.classList.toggle("hidden",!message);
 }
 function openAuth(mode){
   authMode=mode; const signup=mode==="signup"; $("#authTitle").textContent=signup?"Create your account":"Welcome back";
@@ -108,12 +119,17 @@ function schedule(){ const groups=["Medication","Vet appointment","Grooming","Fe
 function emergency(){ const p=selectedPet(); if(!p)return `<div class="card empty-state"><span>🐾</span><h3>No pet selected</h3><p>Add a pet to create an emergency profile.</p><button class="btn btn-primary" data-pet-add>+ Add a pet</button></div>`; const lost=isPetLost(p), home=isPetHome(p); return `<div class="page-head emergency-page-head"><div><h3>Lost-pet profile</h3><p>Important information ready to share when every second counts.</p></div><div class="emergency-owner-actions">${lost?`<button class="btn btn-reunited" data-mark-home="${p.id}">✓ Mark as Home</button>`:""}<button class="btn btn-primary" id="shareEmergency">Share profile</button></div></div>${home?`<div class="reunited-owner-banner"><span>✓</span><div><b>${esc(p.name)} is home</b><p>This profile is preserved and public visitors will see that ${esc(p.name)} has been reunited.</p></div></div>`:""}<section class="card emergency ${home?"pet-home":""}"><p class="eyebrow">${home?"SAFE AT HOME":"IF I'M LOST, PLEASE HELP ME HOME"}</p><div class="emergency-grid"><div class="emergency-pet">${petVisual(p)}</div><div><h3>${esc(p.name)}</h3><p>${esc(p.breed)} · ${esc(displayAge(p))} · ${esc(p.sex||"Sex unknown")}</p><div class="detail-grid"><div><small>OWNER</small><b>${esc(state.user.name)}</b></div><div><small>VETERINARIAN</small><b>${esc(p.vetPhone||p.vetName||"Not provided")}</b></div><div><small>MICROCHIP</small><b>${esc(p.microchip||"Not provided")}</b></div><div><small>ALLERGIES</small><b>${esc(p.allergies||"None listed")}</b></div></div></div></div></section><div class="section-head"><div><h3>Emergency notes</h3><p>Visible on the shared profile</p></div></div><div class="card settings-card"><p>${esc(p.medicalNotes||"No emergency notes have been added.")}</p></div>`; }
 function settings(){ return `<div class="page-head"><div><h3>Settings</h3><p>Manage your account and PawPass preferences.</p></div></div><div class="card settings-card"><div class="setting-row"><div><b>Profile</b><small>${esc(state.user.name)} · ${esc(state.user.email)}</small></div><button class="link-btn">Edit</button></div><div class="setting-row"><div><b>Care notifications</b><small>Reminders are turned on</small></div><button class="link-btn">Manage</button></div><div class="setting-row"><div><b>Export health records</b><small>Download a portable copy of your pets' history</small></div><button class="link-btn" id="exportData">Export</button></div><div class="setting-row"><div><b>Reset demo data</b><small>Restore the original PawPass sample</small></div><button class="link-btn danger" id="resetData">Reset</button></div><div class="setting-row"><div><b>Log out</b><small>Return to the welcome page</small></div><button class="link-btn" id="logout">Log out</button></div></div>`; }
 function render(){
-  const route=viewName(), map={dashboard:dashboard,pets,health:records,schedule,emergency,settings};
-  if(state.lastView!==route){ state.lastView=route; save(); }
-  $("#dateLabel").textContent=dateHeading(); $("#pageTitle").textContent=route==="dashboard"?`Good morning, ${firstName()}`:nav.find(n=>n.toLowerCase()===route)||"PawPass";
-  document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===route));
-  $("#view").innerHTML=(map[route]||dashboard)();
-  renderPetSwitcher();
+  try {
+    const route=viewName(), map={dashboard:dashboard,pets,health:records,schedule,emergency,settings};
+    if(state.lastView!==route){ state.lastView=route; save(); }
+    $("#dateLabel").textContent=dateHeading(); $("#pageTitle").textContent=route==="dashboard"?`Good morning, ${firstName()}`:nav.find(n=>n.toLowerCase()===route)||"PawPass";
+    document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===route));
+    $("#view").innerHTML=(map[route]||dashboard)();
+    renderPetSwitcher();
+  } catch(error) {
+    console.error("PawPass could not render the current view", error);
+    $("#view").innerHTML=`<div class="card empty-state" role="alert"><span>🐾</span><h3>We couldn't open this page</h3><p>${esc(error?.message||"Please try again or log in again.")}</p><button class="btn btn-primary" id="logout">Return to login</button></div>`;
+  }
 }
 function openItem(type="Medication") { const f=$("#itemForm"); f.reset(); f.elements.type.value=type==="task"?"Medication":type; f.elements.date.value=new Date().toISOString().slice(0,10); $("#itemDialog").showModal(); }
 function openPetForm(id){
@@ -140,14 +156,14 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#shareEmergency")){ navigator.clipboard?.writeText(location.href); toast("Emergency profile link copied"); }
   if(e.target.closest("#exportData")){ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="pawpass-records.json";a.click();toast("Your records are ready"); }
   if(e.target.closest("#resetData")){ if(!PawPassBackend.demo()){toast("Reset is available only in demo mode");return;} state=structuredClone(seed);save();render();toast("Demo data restored"); }
-  if(e.target.closest("#logout")){ PawPassBackend.signOut().catch(error=>toast(error.message)); if(PawPassBackend.demo()) endSession(); $("#app").classList.add("hidden");$("#welcome").classList.remove("hidden");history.replaceState(null,"",location.pathname+location.search); }
+  if(e.target.closest("#logout")){ PawPassBackend.signOut().catch(error=>toast(error.message)); if(PawPassBackend.demo()) endSession(); returnToWelcome(); history.replaceState(null,"",location.pathname+location.search); }
 });
 document.addEventListener("change",e=>{ if(e.target.id==="activePet"){state.selectedPetId=state.pets.find(p=>String(p.id)===e.target.value)?.id;save();render();toast(`${selectedPet().name} selected`);} });
 $("#petForm").elements.photo.addEventListener("change",e=>{ const file=e.target.files[0]; if(!file)return; if(!file.type.startsWith("image/")){ $("#petFormError").textContent="Please choose an image file.";e.target.value="";return;} if(file.size>2*1024*1024){$("#petFormError").textContent="Please choose a photo smaller than 2 MB.";e.target.value="";return;} const reader=new FileReader();reader.onload=()=>{$("#petForm").dataset.photo=reader.result;updatePhotoPreview(reader.result);};reader.readAsDataURL(file); });
 $("#petForm").addEventListener("submit",e=>{e.preventDefault();const form=e.target,f=new FormData(form), birthday=f.get("birthday"),age=f.get("age").trim();if(!birthday&&!age){$("#petFormError").textContent="Enter a date of birth or an age.";form.elements.birthday.focus();return;}const id=f.get("id"), existing=state.pets.find(p=>String(p.id)===String(id));const pet={...(existing||{}),id:existing?.id||Date.now(),publicId:existing?.publicId||crypto.randomUUID(),name:f.get("name").trim(),species:f.get("species"),animal:speciesEmoji[f.get("species")],breed:f.get("breed").trim(),birthday,age,sex:f.get("sex"),weight:f.get("weight").trim(),photo:form.dataset.photo||"",microchip:f.get("microchip").trim(),allergies:f.get("allergies").trim(),medications:f.get("medications").trim(),vetName:f.get("vetName").trim(),vetPhone:f.get("vetPhone").trim(),medicalNotes:f.get("medicalNotes").trim(),status:existing?.status||"Profile ready"};if(existing)Object.assign(existing,pet);else state.pets.push(pet);state.selectedPetId=pet.id;save();$("#petDialog").close();render();toast(existing?`${pet.name}'s profile updated`:`${pet.name} joined PawPass!`);});
 $("#authForm").addEventListener("submit",async e=>{e.preventDefault();const fd=new FormData(e.target),button=e.target.querySelector("button[type=submit]"); button.disabled=true; $("#authError").textContent=""; try { if(authMode==="signup"){ const result=await PawPassBackend.signUp(fd.get("name").trim(),fd.get("email"),fd.get("password")); if(result.needsConfirmation){ $("#authDialog").close(); toast("Check your email to confirm your account"); return; } } else await PawPassBackend.signIn(fd.get("email"),fd.get("password")); const boot=await PawPassBackend.init(); state=boot.data||{user:{name:fd.get("name")||"Pet parent",email:fd.get("email")},selectedPetId:null,pets:[],tasks:[],records:[],emergency:{}}; normalizeState(); $("#authDialog").close(); enterApp(); toast(authMode==="signup"?"Welcome to PawPass!":"Welcome back!"); } catch(error){ $("#authError").textContent=error.message; } finally {button.disabled=false;} });
 $("#itemForm").addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.target),type=f.get("type"),raw=f.get("date"),d=new Date(raw+"T12:00:00"),today=new Date();let label=d.toDateString()===today.toDateString()?"Today":d.toLocaleDateString("en-US",{month:"short",day:"numeric"});let time=f.get("time")?new Date(`2000-01-01T${f.get("time")}`).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"All day";const item={id:Date.now(),petId:state.selectedPetId,type,title:f.get("title"),date:label,time,notes:f.get("notes")||"No additional notes"};if(type==="Medical record"||type==="Vaccination")state.records.unshift(item);else state.tasks.push({...item,done:false});save();$("#itemDialog").close();render();toast(`${type} added to ${(selectedPet()?.name || "your pet")}'s care plan`);});
-window.addEventListener("hashchange",()=>{ if(hasSession()) render(); });
+window.addEventListener("hashchange",()=>{ if(appActive) render(); });
 function normalizeState(){
   state.pets ||= []; state.tasks ||= []; state.records ||= []; state.emergency ||= {};
   state.pets.forEach(p=>{ p.species ||= p.animal==="🐈"?"cat":p.animal==="🐦"?"bird":"dog"; p.animal ||= speciesEmoji[p.species]; p.publicId ||= crypto.randomUUID(); });
@@ -156,5 +172,5 @@ function normalizeState(){
 }
 $("#forgotBtn").addEventListener("click",()=>{$("#authDialog").close();$("#resetDialog").showModal();});
 $("#resetForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);try{if($("#newPasswordField").classList.contains("hidden")){await PawPassBackend.forgot(f.get("email"));$("#resetDialog").close();toast("Check your email for a reset link");}else{await PawPassBackend.resetPassword(f.get("password"));$("#resetDialog").close();toast("Password updated — you can continue");}}catch(error){$("#resetError").textContent=error.message;}});
-async function boot(){buildNav();normalizeState();if(hasSession()){enterApp();return;}try{const result=await PawPassBackend.init();if(result.user&&result.data){state=result.data;normalizeState();enterApp();}if(location.hash.includes("type=recovery")||new URLSearchParams(location.search).get("type")==="recovery"){$("#resetEmailField").classList.add("hidden");$("#newPasswordField").classList.remove("hidden");$("#resetTitle").textContent="Choose a new password";$("#resetForm button").textContent="Update password";$("#resetDialog").showModal();}}catch(error){toast(error.message);}}
+async function boot(){buildNav();normalizeState();returnToWelcome();if(hasDemoSession()){enterApp();return;}try{const result=await PawPassBackend.init();if(result.user&&result.data){state=result.data;normalizeState();enterApp();}if(location.hash.includes("type=recovery")||new URLSearchParams(location.search).get("type")==="recovery"){$("#resetEmailField").classList.add("hidden");$("#newPasswordField").classList.remove("hidden");$("#resetTitle").textContent="Choose a new password";$("#resetForm button").textContent="Update password";$("#resetDialog").showModal();}}catch(error){console.error("PawPass could not initialize",error);returnToWelcome(`We couldn't load your PawPass data. ${error.message||"Please log in and try again."}`);}}
 boot();
