@@ -60,11 +60,13 @@
     const pet = selectedPet();
     if (!pet) return null;
     return {
-      v: 2,
+      v: 3,
       owner: state.user?.name || 'Pet owner',
       ownerPhone: state.user?.emergencyPhone || '',
       pet: {
         name: pet.name || 'Pet',
+        status: pet.status || 'Profile ready',
+        photo: pet.photo || '',
         species: pet.species || '',
         animal: pet.animal || '🐾',
         breed: pet.breed || '',
@@ -98,24 +100,30 @@
     if (!welcome) return false;
 
     const ownerPhone = String(payload.ownerPhone || '').trim();
+    // Older shared links predate status data and remain active lost-pet links.
+    const reunited = payload.v >= 3 && ['HOME', 'SAFE'].includes(String(pet.status || '').trim().toUpperCase());
     const phoneHref = ownerPhone.replace(/[^\d+]/g, '');
     const contactActions = phoneHref ? `
       <div class="public-lost-actions">
         <a class="public-lost-action public-lost-call" href="tel:${safe(phoneHref)}">☎ Call Owner</a>
         <a class="public-lost-action public-lost-text" href="sms:${safe(phoneHref)}">✉ Text Owner</a>
       </div>` : '';
-    const foundAction = phoneHref ? `
+    const foundAction = phoneHref && !reunited ? `
       <button class="public-lost-found" id="reportPetFound" type="button">⌖ Report Pet Found</button>` : '';
 
-    document.title = `${pet.name || 'Lost pet'} — PawPass emergency profile`;
+    const petVisual = pet.photo
+      ? `<img src="${safe(pet.photo)}" alt="${safe(pet.name || 'Pet')}">`
+      : safe(pet.animal || '🐾');
+    document.title = reunited ? `${pet.name || 'Pet'} is home — PawPass` : `${pet.name || 'Lost pet'} — PawPass emergency profile`;
     welcome.classList.remove('hidden');
     welcome.innerHTML = `
       <main class="public-lost-wrap">
         <header class="public-lost-brand"><span class="brand-mark">P</span><b>PawPass</b></header>
         <section class="public-lost-card">
-          <p class="eyebrow">IF I'M LOST, PLEASE HELP ME HOME</p>
+          <p class="eyebrow">${reunited ? 'PET REUNITED' : "IF I'M LOST, PLEASE HELP ME HOME"}</p>
+          ${reunited ? `<div class="public-reunited-banner"><span>✓</span><div><b>${safe(pet.name || 'This pet')} is safe at home</b><p>Thank you to everyone who helped bring ${safe(pet.name || 'this pet')} home.</p></div></div>` : ''}
           <div class="public-lost-hero">
-            <div class="public-lost-pet">${safe(pet.animal || '🐾')}</div>
+            <div class="public-lost-pet">${petVisual}</div>
             <div>
               <h1>${safe(pet.name || 'Lost pet')}</h1>
               <p>${safe([pet.breed, pet.age, pet.sex].filter(Boolean).join(' · '))}</p>
@@ -139,7 +147,7 @@
         </section>
         <a class="btn btn-dark public-lost-home" href="${safe(location.origin + location.pathname)}">Visit PawPass</a>
       </main>
-      <dialog class="public-found-dialog" id="foundPetDialog" aria-labelledby="foundPetTitle">
+      ${reunited ? '' : `<dialog class="public-found-dialog" id="foundPetDialog" aria-labelledby="foundPetTitle">
         <button class="public-found-close" type="button" aria-label="Close report form">×</button>
         <p class="eyebrow">HELP ${safe(String(pet.name || 'THIS PET').toUpperCase())} GET HOME</p>
         <h2 id="foundPetTitle">Report pet found</h2>
@@ -157,7 +165,7 @@
           <a class="public-found-submit" id="sendFoundReport" href="${safe(smsUrl(phoneHref, `Pet found: ${pet.name || 'your pet'}`))}">Continue to send report →</a>
           <p class="public-found-privacy" id="foundPetSendHelp" role="status" aria-live="polite">PawPass will open your text app with this report. Nothing is stored on this device or shared until you send it.</p>
         </form>
-      </dialog>`;
+      </dialog>`}`;
 
     if (!document.getElementById('publicLostStyles')) {
       const style = document.createElement('style');
@@ -167,7 +175,8 @@
         .public-lost-brand{width:min(760px,100%);display:flex;gap:10px;align-items:center;font-size:20px;margin-bottom:24px}
         .public-lost-card{width:min(760px,100%);background:#fff;border-radius:28px;padding:32px;box-shadow:0 18px 50px rgba(36,58,64,.12)}
         .public-lost-hero{display:flex;gap:22px;align-items:center;margin:18px 0 28px}.public-lost-hero h1{font-size:38px;margin:0 0 6px}.public-lost-hero p{margin:0;color:#708086}
-        .public-lost-pet{width:126px;height:126px;border-radius:26px;background:#f5cf78;display:grid;place-items:center;font-size:70px;flex:0 0 auto}
+        .public-lost-pet{width:126px;height:126px;border-radius:26px;background:#f5cf78;display:grid;place-items:center;font-size:70px;flex:0 0 auto;overflow:hidden}.public-lost-pet img{width:100%;height:100%;object-fit:cover}
+        .public-reunited-banner{display:flex;gap:14px;align-items:center;background:#dff2ea;border:1px solid #b9ddd2;border-radius:18px;padding:17px 20px;margin:18px 0 24px}.public-reunited-banner>span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2f7664;color:#fff;font-weight:800;flex:none}.public-reunited-banner b{font:800 18px Manrope}.public-reunited-banner p{margin:3px 0 0;color:#52736a;font-size:13px}
         .public-lost-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}.public-lost-action{min-height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;text-decoration:none;font-size:16px;padding:12px 16px}.public-lost-call{background:#243a40;color:#fff}.public-lost-text{background:#f4b8c4;color:#243a40}
         .public-lost-found{width:100%;min-height:58px;border:0;border-radius:16px;background:#f5cf78;color:#243a40;font:800 16px 'DM Sans',sans-serif;margin:0 0 22px;cursor:pointer}
         .public-lost-details{display:grid;grid-template-columns:1fr 1fr;gap:12px}.public-lost-details>div{background:#eef7f6;border-radius:16px;padding:16px}.public-lost-details small,.public-lost-notes small{display:block;font-size:11px;letter-spacing:.12em;color:#71868b;margin-bottom:5px}.public-lost-details b{overflow-wrap:anywhere}
@@ -179,6 +188,7 @@
     }
 
     const dialog = document.getElementById('foundPetDialog');
+    if (reunited) return true;
     const form = document.getElementById('foundPetForm');
     const sendLink = document.getElementById('sendFoundReport');
     const sendHelp = document.getElementById('foundPetSendHelp');
@@ -338,7 +348,7 @@
   const publicToken = new URLSearchParams(location.search).get(paramName);
   if (publicToken) {
     const payload = decodePayload(publicToken);
-    if ((payload?.v === 1 || payload?.v === 2) && payload.pet) {
+    if ([1, 2, 3].includes(payload?.v) && payload.pet) {
       const show = () => renderPublicProfile(payload);
       try { enterApp = show; } catch {}
       try { render = show; } catch {}
