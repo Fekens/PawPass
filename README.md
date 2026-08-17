@@ -82,3 +82,5 @@ Automated static checks cannot deliver authentication email or create real accou
 ├── supabase/migrations/       # Database schema, triggers, indexes, and RLS
 └── .github/workflows/         # GitHub Pages deployment
 ```
+
+<!-- deployment retry -->
