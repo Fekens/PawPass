@@ -133,8 +133,26 @@
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.write('<script src=&quot;https://unpkg.com/@supabase/supabase-js@2&quot;><\/script>')"></script>
   <script src="config.js"></script>
-  <script src="backend.js?v=20260814-reunited-owner"></script>
-  <script src="app.js?v=20260814-render-recovery"></script>
+  <script src="backend.js?v=20260817-recovery-race-fix"></script>
+  <script src="app.js?v=20260817-reset-validation-fix"></script>
+  <script>
+    (() => {
+      const form = document.getElementById("resetForm");
+      const email = form?.elements.email;
+      const password = form?.elements.password;
+      const recovery = new URLSearchParams(location.search).get("type") === "recovery" || location.hash.includes("type=recovery");
+      if (recovery && email && password) {
+        email.required = false;
+        password.required = true;
+      }
+      document.getElementById("forgotBtn")?.addEventListener("click", () => {
+        if (email && password) {
+          email.required = true;
+          password.required = false;
+        }
+      });
+    })();
+  </script>
   <script src="profile-edit.js"></script>
   <script src="emergency-share.js"></script>
 </body>
