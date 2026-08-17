@@ -8,7 +8,6 @@ window.PawPassBackend = (() => {
   }) : null;
   let mode = localStorage.getItem("pawpass-mode") || "cloud";
   let user = null;
-  let recoverySession = false;
   let syncQueue = Promise.resolve();
   const demo = () => mode === "demo";
   const setMode = value => { mode = value; localStorage.setItem("pawpass-mode", value); };
@@ -22,10 +21,36 @@ window.PawPassBackend = (() => {
   };
   const clearAuthRedirect = () => history.replaceState(null, "", location.pathname);
 
-  if (client) {
-    client.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") recoverySession = Boolean(session);
-      if (event === "SIGNED_OUT") recoverySession = false;
+  async function waitForRecoverySession(timeoutMs = 6000) {
+    if (!client) return null;
+
+    const first = await client.auth.getSession();
+    if (first.error) message(first.error);
+    if (first.data.session) return first.data.session;
+
+    return await new Promise(resolve => {
+      let settled = false;
+      const finish = session => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        subscription?.unsubscribe();
+        resolve(session || null);
+      };
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        if (session && ["PASSWORD_RECOVERY", "SIGNED_IN", "INITIAL_SESSION", "TOKEN_REFRESHED"].includes(event)) {
+          finish(session);
+        }
+      });
+      const subscription = data.subscription;
+      const timer = setTimeout(async () => {
+        try {
+          const latest = await client.auth.getSession();
+          finish(latest.error ? null : latest.data.session);
+        } catch {
+          finish(null);
+        }
+      }, timeoutMs);
     });
   }
 
@@ -33,22 +58,28 @@ window.PawPassBackend = (() => {
     if (demo()) return { mode, user: null, data: null };
     if (!client) return { mode, user: null, data: null };
 
+    const isRecovery = recoveryRequested();
     const redirectError = authRedirectError();
-    if (redirectError && recoveryRequested()) {
+    if (redirectError && isRecovery) {
       clearAuthRedirect();
       throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
     }
 
-    const { data, error } = await client.auth.getSession(); if (error) message(error);
-    user = data.session?.user || null;
-
-    if (recoveryRequested() && !data.session) {
-      clearAuthRedirect();
-      throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
+    let session;
+    if (isRecovery) {
+      session = await waitForRecoverySession();
+      if (!session) {
+        clearAuthRedirect();
+        throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
+      }
+    } else {
+      const { data, error } = await client.auth.getSession();
+      if (error) message(error);
+      session = data.session;
     }
 
-    if (recoveryRequested() && data.session) recoverySession = true;
-    return { mode, user, data: user && !recoveryRequested() ? await load() : null };
+    user = session?.user || null;
+    return { mode, user, data: user && !isRecovery ? await load() : null };
   }
   async function signUp(name, email, password) {
     assertCloud(); setMode("cloud");
@@ -60,7 +91,7 @@ window.PawPassBackend = (() => {
     assertCloud(); setMode("cloud"); const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) message(error); user = data.user; return data;
   }
-  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; recoverySession = false; }
+  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; }
   async function forgot(email) {
     assertCloud();
     const redirectTo = `${location.origin}${location.pathname}?type=recovery`;
@@ -69,9 +100,11 @@ window.PawPassBackend = (() => {
   }
   async function resetPassword(password) {
     assertCloud();
-    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    let { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) message(sessionError);
-    if (!recoverySession || !sessionData.session) {
+    let session = sessionData.session;
+    if (!session && recoveryRequested()) session = await waitForRecoverySession(3000);
+    if (!session) {
       clearAuthRedirect();
       throw new Error("Your password reset session is no longer valid. Request a new reset link and use the newest email.");
     }
@@ -79,7 +112,6 @@ window.PawPassBackend = (() => {
     if (error) message(error);
     await client.auth.signOut();
     user = null;
-    recoverySession = false;
     clearAuthRedirect();
   }
 
@@ -135,8 +167,6 @@ window.PawPassBackend = (() => {
     if (demo()) return;
     assertCloud();
     if (!user) throw new Error("Log in as the pet owner to mark this pet as home.");
-    // Update only the owner's status column. Photos, medical details, emergency
-    // data, QR source information, schedules, and health records are untouched.
     const { data, error } = await client.from("pets")
       .update({ status: "Home" })
       .eq("id", petId)
