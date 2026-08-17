@@ -8,18 +8,46 @@ window.PawPassBackend = (() => {
   }) : null;
   let mode = localStorage.getItem("pawpass-mode") || "cloud";
   let user = null;
+  let recoverySession = false;
   let syncQueue = Promise.resolve();
   const demo = () => mode === "demo";
   const setMode = value => { mode = value; localStorage.setItem("pawpass-mode", value); };
   const assertCloud = () => { if (!client) throw new Error("Production accounts are not configured. Use Explore the demo or configure Supabase."); };
   const message = error => { throw new Error(error?.message || "PawPass could not reach the server."); };
   const recoveryRequested = () => new URLSearchParams(location.search).get("type") === "recovery" || location.hash.includes("type=recovery");
+  const authRedirectError = () => {
+    const search = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    return search.get("error_description") || hash.get("error_description") || search.get("error") || hash.get("error") || "";
+  };
+  const clearAuthRedirect = () => history.replaceState(null, "", location.pathname);
+
+  if (client) {
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") recoverySession = Boolean(session);
+      if (event === "SIGNED_OUT") recoverySession = false;
+    });
+  }
 
   async function init() {
     if (demo()) return { mode, user: null, data: null };
     if (!client) return { mode, user: null, data: null };
+
+    const redirectError = authRedirectError();
+    if (redirectError && recoveryRequested()) {
+      clearAuthRedirect();
+      throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
+    }
+
     const { data, error } = await client.auth.getSession(); if (error) message(error);
     user = data.session?.user || null;
+
+    if (recoveryRequested() && !data.session) {
+      clearAuthRedirect();
+      throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
+    }
+
+    if (recoveryRequested() && data.session) recoverySession = true;
     return { mode, user, data: user && !recoveryRequested() ? await load() : null };
   }
   async function signUp(name, email, password) {
@@ -32,7 +60,7 @@ window.PawPassBackend = (() => {
     assertCloud(); setMode("cloud"); const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) message(error); user = data.user; return data;
   }
-  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; }
+  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; recoverySession = false; }
   async function forgot(email) {
     assertCloud();
     const redirectTo = `${location.origin}${location.pathname}?type=recovery`;
@@ -41,9 +69,18 @@ window.PawPassBackend = (() => {
   }
   async function resetPassword(password) {
     assertCloud();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) message(sessionError);
+    if (!recoverySession || !sessionData.session) {
+      clearAuthRedirect();
+      throw new Error("Your password reset session is no longer valid. Request a new reset link and use the newest email.");
+    }
     const { error } = await client.auth.updateUser({ password });
     if (error) message(error);
-    history.replaceState(null, "", location.pathname);
+    await client.auth.signOut();
+    user = null;
+    recoverySession = false;
+    clearAuthRedirect();
   }
 
   async function load() {
