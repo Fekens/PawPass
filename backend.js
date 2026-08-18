@@ -8,6 +8,7 @@ window.PawPassBackend = (() => {
   }) : null;
   let mode = localStorage.getItem("pawpass-mode") || "cloud";
   let user = null;
+  let cloudHydrated = false;
   let syncQueue = Promise.resolve();
   const demo = () => mode === "demo";
   const setMode = value => { mode = value; localStorage.setItem("pawpass-mode", value); };
@@ -55,6 +56,7 @@ window.PawPassBackend = (() => {
   }
 
   async function init() {
+    cloudHydrated = false;
     if (demo()) return { mode, user: null, data: null };
     if (!client) return { mode, user: null, data: null };
 
@@ -91,7 +93,7 @@ window.PawPassBackend = (() => {
     assertCloud(); setMode("cloud"); const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) message(error); user = data.user; return data;
   }
-  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; }
+  async function signOut() { if (client && !demo()) { const { error } = await client.auth.signOut(); if (error) message(error); } user = null; cloudHydrated = false; }
   async function forgot(email) {
     assertCloud();
     const redirectTo = `${location.origin}${location.pathname}?type=recovery`;
@@ -112,6 +114,7 @@ window.PawPassBackend = (() => {
     if (error) message(error);
     await client.auth.signOut();
     user = null;
+    cloudHydrated = false;
     clearAuthRedirect();
   }
 
@@ -121,7 +124,7 @@ window.PawPassBackend = (() => {
     const [profiles, settings, pets, records, tasks, emergency] = results;
     const profile = profiles[0] || {};
     const emergencyPhone = profile.emergency_phone || emergency.find(e => e.contact_phone)?.contact_phone || "";
-    return {
+    const loadedState = {
       user: { name: profile.name || user.user_metadata?.name || "Pet parent", email: user.email, emergencyPhone },
       selectedPetId: settings[0]?.selected_pet_id || pets[0]?.id || null,
       lastView: settings[0]?.last_view || "dashboard",
@@ -131,9 +134,11 @@ window.PawPassBackend = (() => {
       tasks: tasks.map(t => ({ id:t.id,petId:t.pet_id,type:t.schedule_type,title:t.title,date:t.display_date,time:t.display_time,scheduledAt:t.scheduled_at,notes:t.notes,done:t.done })),
       emergency: Object.fromEntries(emergency.map(e => [e.pet_id, { contactName:e.contact_name,contactPhone:e.contact_phone,notes:e.notes }]))
     };
+    cloudHydrated = true;
+    return loadedState;
   }
   async function syncNow(state) {
-    if (demo() || !client || !user) return;
+    if (demo() || !client || !user || !cloudHydrated || recoveryRequested()) return;
     const uid=user.id, petIds=state.pets.map(p=>p.id);
     const petResult = state.pets.length ? await client.from("pets").upsert(state.pets.map(p=>({id:p.id,public_id:p.publicId,user_id:uid,name:p.name,species:p.species,animal:p.animal,breed:p.breed,age:p.age||null,weight:p.weight,birthday:p.birthday||null,sex:p.sex,photo_url:p.photo||null,microchip:p.microchip||null,allergies:p.allergies||null,medications:p.medications||null,vet_name:p.vetName||null,vet_phone:p.vetPhone||null,medical_notes:p.medicalNotes||null,status:p.status}))) : {};
     if (petResult.error) message(petResult.error);
@@ -151,7 +156,7 @@ window.PawPassBackend = (() => {
     })); const cleanupFailure=cleanup.find(x=>x.error); if(cleanupFailure) message(cleanupFailure.error);
   }
   function sync(state) {
-    if (demo() || !client || !user) return Promise.resolve();
+    if (demo() || !client || !user || !cloudHydrated || recoveryRequested()) return Promise.resolve();
     const snapshot = structuredClone(state);
     syncQueue = syncQueue.catch(() => {}).then(() => syncNow(snapshot));
     return syncQueue;

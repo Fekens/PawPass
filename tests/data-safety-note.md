@@ -1,0 +1,1 @@
+Regression guard: cloud sync must not run destructive cleanup until the signed-in user's Supabase state has loaded successfully. Password-recovery routes must never synchronize fallback/empty UI state to production tables.
