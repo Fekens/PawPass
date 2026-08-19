@@ -20,13 +20,24 @@ Deno.serve(async (req: Request) => {
 
   try {
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const plusPriceId = Deno.env.get("PAWPASS_PLUS_PRICE_ID");
+    const monthlyPriceId = Deno.env.get("PAWPASS_PLUS_PRICE_ID");
+    const yearlyPriceId = "price_1U6CYB36VDh5sokI6kZh5Svu";
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!stripeSecretKey || !plusPriceId || !supabaseUrl || !supabaseAnonKey) {
+    if (!stripeSecretKey || !monthlyPriceId || !supabaseUrl || !supabaseAnonKey) {
       throw new Error("Payment service is not fully configured.");
     }
+
+    let requestBody: { billing_period?: string } = {};
+    try {
+      requestBody = await req.json();
+    } catch {
+      // Keep backward compatibility with callers that send an empty body.
+    }
+
+    const billingPeriod = requestBody?.billing_period === "year" ? "year" : "month";
+    const plusPriceId = billingPeriod === "year" ? yearlyPriceId : monthlyPriceId;
 
     const authorization = req.headers.get("Authorization");
     if (!authorization?.startsWith("Bearer ")) {
@@ -70,7 +81,9 @@ Deno.serve(async (req: Request) => {
     body.set("line_items[0][price]", plusPriceId);
     body.set("line_items[0][quantity]", "1");
     body.set("metadata[supabase_user_id]", user.id);
+    body.set("metadata[billing_period]", billingPeriod);
     body.set("subscription_data[metadata][supabase_user_id]", user.id);
+    body.set("subscription_data[metadata][billing_period]", billingPeriod);
 
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
