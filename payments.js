@@ -3,7 +3,9 @@
   const yearlyCheckoutButtonId = "pawpassPlusYearlyCheckout";
   const plusRowId = "pawpassPlusRow";
   const statusRetryButtonId = "pawpassPlusStatusRetry";
-  const checkoutSucceeded = new URLSearchParams(location.search).get("checkout") === "success";
+  const params = new URLSearchParams(location.search);
+  const checkoutSucceeded = params.get("checkout") === "success";
+  const pricingPreview = params.get("preview") === "pricing";
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -56,9 +58,27 @@
     return row;
   }
 
+  function renderPricingChoice(row, previewOnly = false) {
+    row.innerHTML = `
+      <div>
+        <b>PawPass Plus${previewOnly ? " — Pricing preview" : ""}</b>
+        <small>Choose $4.99/month or $49.99/year (save $9.89/year)</small>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn btn-ghost" id="${monthlyCheckoutButtonId}" type="button"${previewOnly ? " data-preview-only=\"true\"" : ""}>$4.99/month</button>
+        <button class="btn btn-primary" id="${yearlyCheckoutButtonId}" type="button"${previewOnly ? " data-preview-only=\"true\"" : ""}>$49.99/year</button>
+      </div>
+    `;
+  }
+
   async function injectUpgradeRow() {
     const row = ensurePlusRow();
     if (!row) return;
+
+    if (pricingPreview) {
+      renderPricingChoice(row, true);
+      return;
+    }
 
     row.innerHTML = `
       <div>
@@ -81,16 +101,7 @@
         return;
       }
 
-      row.innerHTML = `
-        <div>
-          <b>PawPass Plus</b>
-          <small>Choose $4.99/month or $49.99/year (save $9.89/year)</small>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          <button class="btn btn-ghost" id="${monthlyCheckoutButtonId}" type="button">$4.99/month</button>
-          <button class="btn btn-primary" id="${yearlyCheckoutButtonId}" type="button">$49.99/year</button>
-        </div>
-      `;
+      renderPricingChoice(row, false);
     } catch (error) {
       console.error("Could not check PawPass Plus status", error);
       row.innerHTML = `
@@ -103,7 +114,23 @@
     }
   }
 
+  function showMessage(message) {
+    const toast = document.getElementById("toast");
+    if (toast) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3200);
+    } else {
+      alert(message);
+    }
+  }
+
   async function startCheckout(button, billingPeriod) {
+    if (button.dataset.previewOnly === "true") {
+      showMessage("Pricing preview only. Use a non-Plus account to test checkout.");
+      return;
+    }
+
     if (!window.PawPassBackend?.client) {
       throw new Error("Payments are available only for signed-in PawPass accounts.");
     }
@@ -128,15 +155,7 @@
     } catch (error) {
       button.disabled = false;
       button.textContent = original;
-      const message = error?.message || "Could not start checkout.";
-      const toast = document.getElementById("toast");
-      if (toast) {
-        toast.textContent = message;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 3200);
-      } else {
-        alert(message);
-      }
+      showMessage(error?.message || "Could not start checkout.");
     }
   }
 
