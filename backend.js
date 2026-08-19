@@ -146,7 +146,7 @@ window.PawPassBackend = (() => {
       client.from("profiles").upsert({id:uid,name:state.user.name,emergency_phone:state.user.emergencyPhone||null}),
       client.from("user_settings").upsert({user_id:uid,selected_pet_id:state.selectedPetId||null,last_view:state.lastView||"dashboard",preferences:state.preferences||{}}),
       state.records.length ? client.from("health_records").upsert(state.records.map(r=>({id:r.id,user_id:uid,pet_id:r.petId,record_type:r.type,title:r.title,record_date:r.date,notes:r.notes}))) : Promise.resolve({}),
-      state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
+      state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,display_time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
       state.pets.length ? client.from("emergency_data").upsert(state.pets.map(p=>({pet_id:p.id,user_id:uid,contact_name:state.user.name,contact_phone:state.user.emergencyPhone||null,notes:p.medicalNotes||null}))) : Promise.resolve({})
     ];
     const results=await Promise.all(operations); const failure=results.find(x=>x.error); if(failure) message(failure.error);
