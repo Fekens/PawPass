@@ -16,7 +16,10 @@
         <b>PawPass Support</b>
         <small>Need help? Call or text ${SUPPORT_PHONE_DISPLAY}</small>
       </div>
-      <a class="link-btn" href="tel:${SUPPORT_PHONE_TEL}" aria-label="Call PawPass Support at ${SUPPORT_PHONE_DISPLAY}">Call</a>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+        <a class="link-btn" href="tel:${SUPPORT_PHONE_TEL}" aria-label="Call PawPass Support at ${SUPPORT_PHONE_DISPLAY}">Call</a>
+        <a class="link-btn" href="sms:${SUPPORT_PHONE_TEL}" aria-label="Text PawPass Support at ${SUPPORT_PHONE_DISPLAY}">Text</a>
+      </div>
     `;
 
     const logout = card.querySelector("#logout")?.closest(".setting-row");
