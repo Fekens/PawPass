@@ -1,5 +1,6 @@
 (() => {
-  const checkoutButtonId = "pawpassPlusCheckout";
+  const monthlyCheckoutButtonId = "pawpassPlusMonthlyCheckout";
+  const yearlyCheckoutButtonId = "pawpassPlusYearlyCheckout";
   const plusRowId = "pawpassPlusRow";
   const statusRetryButtonId = "pawpassPlusStatusRetry";
   const checkoutSucceeded = new URLSearchParams(location.search).get("checkout") === "success";
@@ -29,9 +30,6 @@
   }
 
   async function getSubscriptionWithRetry() {
-    // Stripe can redirect back to PawPass a moment before the webhook finishes.
-    // On a successful checkout return, briefly poll instead of showing Upgrade
-    // and risking a duplicate subscription.
     const attempts = checkoutSucceeded ? 6 : 1;
     let subscription = null;
     for (let attempt = 0; attempt < attempts; attempt++) {
@@ -67,7 +65,7 @@
         <b>PawPass Plus</b>
         <small>Checking your membership…</small>
       </div>
-      <button class="btn btn-primary" id="${checkoutButtonId}" type="button" disabled>Checking…</button>
+      <button class="btn btn-primary" type="button" disabled>Checking…</button>
     `;
 
     try {
@@ -86,9 +84,12 @@
       row.innerHTML = `
         <div>
           <b>PawPass Plus</b>
-          <small>Unlock PawPass Plus for $4.99/month</small>
+          <small>Choose $4.99/month or $49.99/year (save $9.89/year)</small>
         </div>
-        <button class="btn btn-primary" id="${checkoutButtonId}" type="button">Upgrade</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-ghost" id="${monthlyCheckoutButtonId}" type="button">$4.99/month</button>
+          <button class="btn btn-primary" id="${yearlyCheckoutButtonId}" type="button">$49.99/year</button>
+        </div>
       `;
     } catch (error) {
       console.error("Could not check PawPass Plus status", error);
@@ -102,7 +103,7 @@
     }
   }
 
-  async function startCheckout(button) {
+  async function startCheckout(button, billingPeriod) {
     if (!window.PawPassBackend?.client) {
       throw new Error("Payments are available only for signed-in PawPass accounts.");
     }
@@ -119,7 +120,7 @@
       }
 
       const { data, error } = await window.PawPassBackend.client.functions.invoke("create-checkout-session", {
-        body: {}
+        body: { billing_period: billingPeriod }
       });
       if (error) throw error;
       if (!data?.url) throw new Error(data?.error || "Stripe Checkout did not return a payment link.");
@@ -140,9 +141,15 @@
   }
 
   document.addEventListener("click", event => {
-    const checkoutButton = event.target.closest(`#${checkoutButtonId}`);
-    if (checkoutButton) {
-      startCheckout(checkoutButton);
+    const monthlyButton = event.target.closest(`#${monthlyCheckoutButtonId}`);
+    if (monthlyButton) {
+      startCheckout(monthlyButton, "month");
+      return;
+    }
+
+    const yearlyButton = event.target.closest(`#${yearlyCheckoutButtonId}`);
+    if (yearlyButton) {
+      startCheckout(yearlyButton, "year");
       return;
     }
 
