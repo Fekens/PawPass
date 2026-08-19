@@ -1,6 +1,6 @@
 (() => {
-  const SUPPORT_PHONE_DISPLAY = "(407) 504-7466";
-  const SUPPORT_PHONE_TEL = "+14075047466";
+  const SUPPORT_PHONE_DISPLAY = "(863) 588-6620";
+  const SUPPORT_PHONE_TEL = "+18635886620";
 
   function addSupport() {
     const view = document.getElementById("view");
