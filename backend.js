@@ -24,11 +24,9 @@ window.PawPassBackend = (() => {
 
   async function waitForRecoverySession(timeoutMs = 6000) {
     if (!client) return null;
-
     const first = await client.auth.getSession();
     if (first.error) message(first.error);
     if (first.data.session) return first.data.session;
-
     return await new Promise(resolve => {
       let settled = false;
       const finish = session => {
@@ -39,18 +37,14 @@ window.PawPassBackend = (() => {
         resolve(session || null);
       };
       const { data } = client.auth.onAuthStateChange((event, session) => {
-        if (session && ["PASSWORD_RECOVERY", "SIGNED_IN", "INITIAL_SESSION", "TOKEN_REFRESHED"].includes(event)) {
-          finish(session);
-        }
+        if (session && ["PASSWORD_RECOVERY", "SIGNED_IN", "INITIAL_SESSION", "TOKEN_REFRESHED"].includes(event)) finish(session);
       });
       const subscription = data.subscription;
       const timer = setTimeout(async () => {
         try {
           const latest = await client.auth.getSession();
           finish(latest.error ? null : latest.data.session);
-        } catch {
-          finish(null);
-        }
+        } catch { finish(null); }
       }, timeoutMs);
     });
   }
@@ -59,14 +53,12 @@ window.PawPassBackend = (() => {
     cloudHydrated = false;
     if (demo()) return { mode, user: null, data: null };
     if (!client) return { mode, user: null, data: null };
-
     const isRecovery = recoveryRequested();
     const redirectError = authRedirectError();
     if (redirectError && isRecovery) {
       clearAuthRedirect();
       throw new Error("This password reset link is invalid or has expired. Request a new password reset link and use the newest email.");
     }
-
     let session;
     if (isRecovery) {
       session = await waitForRecoverySession();
@@ -79,16 +71,24 @@ window.PawPassBackend = (() => {
       if (error) message(error);
       session = data.session;
     }
-
     user = session?.user || null;
     return { mode, user, data: user && !isRecovery ? await load() : null };
   }
+
   async function signUp(name, email, password) {
-    assertCloud(); setMode("cloud");
-    const { data, error } = await client.auth.signUp({ email, password, options: { data: { name } } });
-    if (error) message(error); user = data.user;
+    assertCloud();
+    setMode("cloud");
+    const emailRedirectTo = `${location.origin}${location.pathname}`;
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { data: { name }, emailRedirectTo }
+    });
+    if (error) message(error);
+    user = data.user;
     return { user, session: data.session, needsConfirmation: !data.session };
   }
+
   async function signIn(email, password) {
     assertCloud(); setMode("cloud"); const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) message(error); user = data.user; return data;
@@ -146,7 +146,7 @@ window.PawPassBackend = (() => {
       client.from("profiles").upsert({id:uid,name:state.user.name,emergency_phone:state.user.emergencyPhone||null}),
       client.from("user_settings").upsert({user_id:uid,selected_pet_id:state.selectedPetId||null,last_view:state.lastView||"dashboard",preferences:state.preferences||{}}),
       state.records.length ? client.from("health_records").upsert(state.records.map(r=>({id:r.id,user_id:uid,pet_id:r.petId,record_type:r.type,title:r.title,record_date:r.date,notes:r.notes}))) : Promise.resolve({}),
-      state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,display_time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
+      state.tasks.length ? client.from("schedules").upsert(state.tasks.map(t=>({id:t.id,user_id:uid,pet_id:t.petId,schedule_type:t.type,title:t.title,display_date:t.date,time:t.time,scheduled_at:t.scheduledAt||null,notes:t.notes,done:t.done}))) : Promise.resolve({}),
       state.pets.length ? client.from("emergency_data").upsert(state.pets.map(p=>({pet_id:p.id,user_id:uid,contact_name:state.user.name,contact_phone:state.user.emergencyPhone||null,notes:p.medicalNotes||null}))) : Promise.resolve({})
     ];
     const results=await Promise.all(operations); const failure=results.find(x=>x.error); if(failure) message(failure.error);
