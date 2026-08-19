@@ -16,9 +16,7 @@
 
   async function hasPlus({ force = false } = {}) {
     const now = Date.now();
-    if (!force && cached.value !== null && now - cached.checkedAt < CACHE_MS) {
-      return cached.value;
-    }
+    if (!force && cached.value !== null && now - cached.checkedAt < CACHE_MS) return cached.value;
 
     const client = window.PawPassBackend?.client;
     if (!client) {
@@ -49,21 +47,27 @@
     return Boolean(target.closest('[data-view="emergency"]'));
   }
 
-  function isHealthExport(target) {
+  function exportButton(target) {
     const button = target.closest("button");
-    if (!button) return false;
+    if (!button) return null;
     const row = button.closest(".setting-row");
-    if (!row) return false;
-    return /export health records/i.test(row.textContent || "") || /^export$/i.test(button.textContent.trim());
+    if (!row) return null;
+    return /export health records/i.test(row.textContent || "") || /^export$/i.test(button.textContent.trim()) ? button : null;
   }
 
   async function guardPremiumClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    const button = exportButton(target);
+    if (button?.dataset.plusVerified === "1") {
+      delete button.dataset.plusVerified;
+      return;
+    }
+
     let feature = null;
     if (isEmergencyNavigation(target)) feature = "Emergency tools and lost-pet sharing";
-    else if (isHealthExport(target)) feature = "Health record export";
+    else if (button) feature = "Health record export";
     if (!feature) return;
 
     event.preventDefault();
@@ -71,14 +75,15 @@
 
     try {
       if (await hasPlus()) {
-        // Re-dispatch the same intent after verification, bypassing this guard once.
         if (isEmergencyNavigation(target)) {
           location.hash = "#emergency";
-        } else {
-          target.closest("button")?.click();
+        } else if (button) {
+          button.dataset.plusVerified = "1";
+          button.click();
         }
         return;
       }
+
       showToast(`${feature} is included with PawPass Plus. Upgrade in Settings to unlock it.`);
       if (!location.hash.toLowerCase().includes("settings")) {
         setTimeout(() => { location.hash = "#settings"; }, 350);
@@ -89,7 +94,6 @@
     }
   }
 
-  // Capture before app.js handlers so locked features cannot run first.
   document.addEventListener("click", guardPremiumClick, true);
 
   window.PawPassPlus = {
