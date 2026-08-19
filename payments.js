@@ -1,12 +1,18 @@
 (() => {
   const checkoutButtonId = "pawpassPlusCheckout";
+  const plusRowId = "pawpassPlusRow";
+  const statusRetryButtonId = "pawpassPlusStatusRetry";
+  const checkoutSucceeded = new URLSearchParams(location.search).get("checkout") === "success";
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   async function getSubscription() {
     const client = window.PawPassBackend?.client;
     if (!client) return null;
 
     const { data: { user }, error: userError } = await client.auth.getUser();
-    if (userError || !user) return null;
+    if (userError) throw userError;
+    if (!user) return null;
 
     const { data, error } = await client
       .from("subscriptions")
@@ -22,19 +28,39 @@
     return ["active", "trialing"].includes(String(subscription?.status || "").toLowerCase());
   }
 
-  async function injectUpgradeRow() {
-    const view = document.getElementById("view");
-    if (!view || !location.hash.toLowerCase().includes("settings")) return;
-    const card = view.querySelector(".settings-card");
-    if (!card) return;
+  async function getSubscriptionWithRetry() {
+    // Stripe can redirect back to PawPass a moment before the webhook finishes.
+    // On a successful checkout return, briefly poll instead of showing Upgrade
+    // and risking a duplicate subscription.
+    const attempts = checkoutSucceeded ? 6 : 1;
+    let subscription = null;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      subscription = await getSubscription();
+      if (isPlusActive(subscription)) return subscription;
+      if (attempt < attempts - 1) await sleep(1000);
+    }
+    return subscription;
+  }
 
-    let row = document.getElementById("pawpassPlusRow");
+  function ensurePlusRow() {
+    const view = document.getElementById("view");
+    if (!view || !location.hash.toLowerCase().includes("settings")) return null;
+    const card = view.querySelector(".settings-card");
+    if (!card) return null;
+
+    let row = document.getElementById(plusRowId);
     if (!row) {
       row = document.createElement("div");
-      row.id = "pawpassPlusRow";
+      row.id = plusRowId;
       row.className = "setting-row";
       card.prepend(row);
     }
+    return row;
+  }
+
+  async function injectUpgradeRow() {
+    const row = ensurePlusRow();
+    if (!row) return;
 
     row.innerHTML = `
       <div>
@@ -45,7 +71,7 @@
     `;
 
     try {
-      const subscription = await getSubscription();
+      const subscription = await getSubscriptionWithRetry();
       if (isPlusActive(subscription)) {
         row.innerHTML = `
           <div>
@@ -54,23 +80,24 @@
           </div>
           <span class="status-pill">✓ Active</span>
         `;
-      } else {
-        row.innerHTML = `
-          <div>
-            <b>PawPass Plus</b>
-            <small>Unlock PawPass Plus for $4.99/month</small>
-          </div>
-          <button class="btn btn-primary" id="${checkoutButtonId}" type="button">Upgrade</button>
-        `;
+        return;
       }
+
+      row.innerHTML = `
+        <div>
+          <b>PawPass Plus</b>
+          <small>Unlock PawPass Plus for $4.99/month</small>
+        </div>
+        <button class="btn btn-primary" id="${checkoutButtonId}" type="button">Upgrade</button>
+      `;
     } catch (error) {
       console.error("Could not check PawPass Plus status", error);
       row.innerHTML = `
         <div>
           <b>PawPass Plus</b>
-          <small>Could not verify membership. Refresh and try again.</small>
+          <small>We couldn't verify your membership yet.</small>
         </div>
-        <button class="btn btn-primary" id="${checkoutButtonId}" type="button">Upgrade</button>
+        <button class="btn btn-ghost" id="${statusRetryButtonId}" type="button">Retry status</button>
       `;
     }
   }
@@ -113,13 +140,20 @@
   }
 
   document.addEventListener("click", event => {
-    const button = event.target.closest(`#${checkoutButtonId}`);
-    if (button) startCheckout(button);
+    const checkoutButton = event.target.closest(`#${checkoutButtonId}`);
+    if (checkoutButton) {
+      startCheckout(checkoutButton);
+      return;
+    }
+
+    if (event.target.closest(`#${statusRetryButtonId}`)) {
+      injectUpgradeRow();
+    }
   });
 
   window.addEventListener("hashchange", () => setTimeout(injectUpgradeRow, 0));
   new MutationObserver(() => {
-    if (!document.getElementById("pawpassPlusRow")) injectUpgradeRow();
+    if (!document.getElementById(plusRowId)) injectUpgradeRow();
   }).observe(document.documentElement, { childList: true, subtree: true });
   setTimeout(injectUpgradeRow, 0);
 })();
