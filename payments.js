@@ -7,7 +7,6 @@
   const checkoutState = params.get("checkout");
   const checkoutSucceeded = checkoutState === "success";
   const checkoutCancelled = checkoutState === "cancelled";
-  const pricingPreview = params.get("preview") === "pricing";
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -56,15 +55,15 @@
     return row;
   }
 
-  function renderPricingChoice(row, previewOnly = false) {
+  function renderPricingChoice(row) {
     row.innerHTML = `
       <div>
-        <b>PawPass Plus${previewOnly ? " — Pricing preview" : ""}</b>
+        <b>PawPass Plus</b>
         <small>Choose $4.99/month or $49.99/year (save $9.89/year)</small>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <button class="btn btn-ghost" id="${monthlyCheckoutButtonId}" type="button"${previewOnly ? " data-preview-only=\"true\"" : ""}>$4.99/month</button>
-        <button class="btn btn-primary" id="${yearlyCheckoutButtonId}" type="button"${previewOnly ? " data-preview-only=\"true\"" : ""}>$49.99/year</button>
+        <button class="btn btn-ghost" id="${monthlyCheckoutButtonId}" type="button">$4.99/month</button>
+        <button class="btn btn-primary" id="${yearlyCheckoutButtonId}" type="button">$49.99/year</button>
       </div>`;
   }
 
@@ -89,10 +88,6 @@
   async function injectUpgradeRow() {
     const row = ensurePlusRow();
     if (!row) return;
-    if (pricingPreview) {
-      renderPricingChoice(row, true);
-      return;
-    }
 
     row.innerHTML = `
       <div><b>PawPass Plus</b><small>${checkoutSucceeded ? "Confirming your membership…" : "Checking your membership…"}</small></div>
@@ -119,7 +114,7 @@
         return;
       }
 
-      renderPricingChoice(row, false);
+      renderPricingChoice(row);
       if (checkoutCancelled) {
         showMessage("Checkout cancelled — you were not charged.");
         cleanCheckoutQuery();
@@ -133,10 +128,6 @@
   }
 
   async function startCheckout(button, billingPeriod) {
-    if (button.dataset.previewOnly === "true") {
-      showMessage("Pricing preview only. Use a non-Plus account to test checkout.");
-      return;
-    }
     if (!window.PawPassBackend?.client) {
       showMessage("Payments are available only for signed-in PawPass accounts.");
       return;
