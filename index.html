@@ -32,131 +32,25 @@
         <div class="sun-shape"></div>
         <div class="phone-card">
           <div class="phone-head"><span class="mini-logo">P</span><span>Good morning, Alex</span><b>•••</b></div>
-          <div class="pet-feature">
-            <div class="pet-art dog-art">🐕</div>
-            <div><small>MY COMPANION</small><h3>Milo</h3><p>Golden Retriever · 3 years</p></div>
-            <span class="status-pill">● Healthy</span>
-          </div>
-          <div class="today-line"><b>Today's care</b><small>2 of 4 complete</small></div>
-          <div class="progress"><i></i></div>
+          <div class="pet-feature"><div class="pet-art dog-art">🐕</div><div><small>MY COMPANION</small><h3>Milo</h3><p>Golden Retriever · 3 years</p></div><span class="status-pill">● Healthy</span></div>
+          <div class="today-line"><b>Today's care</b><small>2 of 4 complete</small></div><div class="progress"><i></i></div>
           <div class="task-preview"><span class="task-icon coral">💊</span><div><b>Heartworm tablet</b><small>Today · 8:00 AM</small></div><span class="check">✓</span></div>
           <div class="task-preview"><span class="task-icon mint">🥣</span><div><b>Evening meal</b><small>Today · 6:30 PM</small></div><span class="empty-check"></span></div>
           <div class="floating-card"><span>🩺</span><div><small>NEXT APPOINTMENT</small><b>Annual wellness visit</b><p>Friday, 10:30 AM</p></div></div>
-        </div>
-        <div class="orbit orbit-one">♥</div><div class="orbit orbit-two">✦</div>
+        </div><div class="orbit orbit-one">♥</div><div class="orbit orbit-two">✦</div>
       </div>
     </section>
-    <section class="feature-strip wrap">
-      <article><span>✚</span><div><b>Health, all together</b><p>Records and vaccines at your fingertips.</p></div></article>
-      <article><span>◷</span><div><b>Never miss a moment</b><p>Gentle reminders for everyday care.</p></div></article>
-      <article><span>⌖</span><div><b>Ready for anything</b><p>An emergency profile when it matters.</p></div></article>
-    </section>
+    <section class="feature-strip wrap"><article><span>✚</span><div><b>Health, all together</b><p>Records and vaccines at your fingertips.</p></div></article><article><span>◷</span><div><b>Never miss a moment</b><p>Gentle reminders for everyday care.</p></div></article><article><span>⌖</span><div><b>Ready for anything</b><p>An emergency profile when it matters.</p></div></article></section>
   </main>
 
-  <main id="app" class="app hidden">
-    <aside class="sidebar">
-      <a class="brand side-brand" href="#dashboard"><span class="brand-mark">P</span><span>PawPass</span></a>
-      <nav id="sideNav" class="side-nav"></nav>
-      <div id="petSwitcher" class="side-pet"></div>
-    </aside>
-    <section class="workspace">
-      <header class="app-header"><div><button class="mobile-brand" data-view="dashboard"><span class="brand-mark">P</span></button><p id="dateLabel"></p><h2 id="pageTitle">Good morning, Alex</h2></div><div class="header-actions"><button class="icon-btn" aria-label="Notifications">♢<i></i></button><button class="profile-btn" data-view="settings">AL</button></div></header>
-      <div id="view" class="view"></div>
-    </section>
-    <nav id="mobileNav" class="mobile-nav"></nav>
-  </main>
+  <main id="app" class="app hidden"><aside class="sidebar"><a class="brand side-brand" href="#dashboard"><span class="brand-mark">P</span><span>PawPass</span></a><nav id="sideNav" class="side-nav"></nav><div id="petSwitcher" class="side-pet"></div></aside><section class="workspace"><header class="app-header"><div><button class="mobile-brand" data-view="dashboard"><span class="brand-mark">P</span></button><p id="dateLabel"></p><h2 id="pageTitle">Good morning, Alex</h2></div><div class="header-actions"><button class="icon-btn" aria-label="Notifications">♢<i></i></button><button class="profile-btn" data-view="settings">AL</button></div></header><div id="view" class="view"></div></section><nav id="mobileNav" class="mobile-nav"></nav></main>
 
-  <dialog id="authDialog" class="modal auth-modal">
-    <button class="modal-close" data-close aria-label="Close">×</button>
-    <div class="auth-logo"><span class="brand-mark">P</span></div>
-    <p class="eyebrow centered">WELCOME TO PAWPASS</p>
-    <h2 id="authTitle">Create your account</h2>
-    <p id="authSubtitle">One simple home for a lifetime of care.</p>
-    <form id="authForm">
-      <label id="nameField">Your name<input name="name" placeholder="Alex Morgan" autocomplete="name"></label>
-      <label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label>
-      <label>Password<input name="password" type="password" placeholder="At least 8 characters" minlength="8" required autocomplete="current-password"></label>
-      <button class="btn btn-primary btn-block" type="submit"><span id="authSubmit">Create account</span> →</button>
-      <p id="authError" class="form-error" role="alert"></p>
-    </form>
-    <button id="forgotBtn" class="text-btn hidden" type="button">Forgot your password?</button>
-    <p class="switch-auth" id="switchAuth"></p>
-  </dialog>
-
-  <dialog id="resetDialog" class="modal auth-modal">
-    <button class="modal-close" data-close aria-label="Close">×</button>
-    <div class="auth-logo"><span class="brand-mark">P</span></div>
-    <h2 id="resetTitle">Reset your password</h2>
-    <p id="resetSubtitle">Enter your account email and we'll send a secure reset link.</p>
-    <form id="resetForm">
-      <label id="resetEmailField">Email address<input name="email" type="email" required autocomplete="email"></label>
-      <label id="newPasswordField" class="hidden">New password<input name="password" type="password" minlength="8" autocomplete="new-password"></label>
-      <p id="resetError" class="form-error" role="alert"></p>
-      <button class="btn btn-primary btn-block" type="submit">Send reset link</button>
-    </form>
-  </dialog>
-
-  <dialog id="itemDialog" class="modal item-modal">
-    <button class="modal-close" data-close aria-label="Close">×</button>
-    <p class="eyebrow">QUICK ADD</p><h2 id="itemTitle">Add a reminder</h2><p>Keep your pet's care plan up to date.</p>
-    <form id="itemForm">
-      <input type="hidden" name="kind" value="medication">
-      <label>Type<select name="type"><option>Medication</option><option>Vet appointment</option><option>Grooming</option><option>Feeding</option><option>Vaccination</option><option>Medical record</option></select></label>
-      <label>Title<input name="title" placeholder="e.g. Heartworm tablet" required></label>
-      <div class="form-row"><label>Date<input name="date" type="date" required></label><label>Time<input name="time" type="time"></label></div>
-      <label>Notes<textarea name="notes" placeholder="Optional details"></textarea></label>
-      <button class="btn btn-primary btn-block" type="submit">Save to care plan →</button>
-    </form>
-  </dialog>
-
-  <dialog id="petDialog" class="modal pet-modal">
-    <button class="modal-close" data-close aria-label="Close">×</button>
-    <p class="eyebrow">PET PROFILE</p><h2 id="petDialogTitle">Add a pet</h2>
-    <p>Keep the details that matter close at paw.</p>
-    <form id="petForm">
-      <input type="hidden" name="id">
-      <div class="photo-field">
-        <div id="photoPreview" class="photo-preview" aria-hidden="true">🐾</div>
-        <label>Profile photo <span class="optional">Optional</span><input name="photo" type="file" accept="image/*"></label>
-      </div>
-      <div class="form-row"><label>Pet name <span class="required">*</span><input name="name" required maxlength="50" autocomplete="off"></label><label>Species <span class="required">*</span><select name="species" required><option value="">Choose one</option><option value="dog">Dog</option><option value="cat">Cat</option><option value="bird">Bird</option><option value="other">Other</option></select></label></div>
-      <label>Breed <span class="required">*</span><input name="breed" required maxlength="80" placeholder="e.g. Golden Retriever"></label>
-      <fieldset><legend>Age <span class="required">*</span></legend><p class="field-help">Enter a date of birth or an age.</p><div class="form-row"><label>Date of birth<input name="birthday" type="date"></label><label>Age<input name="age" maxlength="30" placeholder="e.g. 3 years"></label></div></fieldset>
-      <div class="form-row"><label>Sex <span class="required">*</span><select name="sex" required><option value="">Choose one</option><option>Female</option><option>Male</option><option>Unknown</option></select></label><label>Weight <span class="required">*</span><input name="weight" required maxlength="30" placeholder="e.g. 31 kg"></label></div>
-      <label>Microchip number<input name="microchip" maxlength="40"></label>
-      <div class="form-row"><label>Allergies<textarea name="allergies" placeholder="None known"></textarea></label><label>Medications<textarea name="medications" placeholder="None"></textarea></label></div>
-      <div class="form-row"><label>Veterinarian name<input name="vetName" maxlength="80"></label><label>Veterinarian phone<input name="vetPhone" type="tel" maxlength="30"></label></div>
-      <label>Medical notes<textarea name="medicalNotes" placeholder="Conditions, care instructions, or anything else to know"></textarea></label>
-      <p id="petFormError" class="form-error" role="alert"></p>
-      <div class="modal-actions"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Save Pet</button></div>
-    </form>
-  </dialog>
+  <dialog id="authDialog" class="modal auth-modal"><button class="modal-close" data-close aria-label="Close">×</button><div class="auth-logo"><span class="brand-mark">P</span></div><p class="eyebrow centered">WELCOME TO PAWPASS</p><h2 id="authTitle">Create your account</h2><p id="authSubtitle">One simple home for a lifetime of care.</p><form id="authForm"><label id="nameField">Your name<input name="name" placeholder="Alex Morgan" autocomplete="name"></label><label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label><label>Password<input name="password" type="password" placeholder="At least 8 characters" minlength="8" required autocomplete="current-password"></label><button class="btn btn-primary btn-block" type="submit"><span id="authSubmit">Create account</span> →</button><p id="authError" class="form-error" role="alert"></p></form><button id="forgotBtn" class="text-btn hidden" type="button">Forgot your password?</button><p class="switch-auth" id="switchAuth"></p></dialog>
+  <dialog id="resetDialog" class="modal auth-modal"><button class="modal-close" data-close aria-label="Close">×</button><div class="auth-logo"><span class="brand-mark">P</span></div><h2 id="resetTitle">Reset your password</h2><p id="resetSubtitle">Enter your account email and we'll send a secure reset link.</p><form id="resetForm"><label id="resetEmailField">Email address<input name="email" type="email" required autocomplete="email"></label><label id="newPasswordField" class="hidden">New password<input name="password" type="password" minlength="8" autocomplete="new-password"></label><p id="resetError" class="form-error" role="alert"></p><button class="btn btn-primary btn-block" type="submit">Send reset link</button></form></dialog>
+  <dialog id="itemDialog" class="modal item-modal"><button class="modal-close" data-close aria-label="Close">×</button><p class="eyebrow">QUICK ADD</p><h2 id="itemTitle">Add a reminder</h2><p>Keep your pet's care plan up to date.</p><form id="itemForm"><input type="hidden" name="kind" value="medication"><label>Type<select name="type"><option>Medication</option><option>Vet appointment</option><option>Grooming</option><option>Feeding</option><option>Vaccination</option><option>Medical record</option></select></label><label>Title<input name="title" placeholder="e.g. Heartworm tablet" required></label><div class="form-row"><label>Date<input name="date" type="date" required></label><label>Time<input name="time" type="time"></label></div><label>Notes<textarea name="notes" placeholder="Optional details"></textarea></label><button class="btn btn-primary btn-block" type="submit">Save to care plan →</button></form></dialog>
+  <dialog id="petDialog" class="modal pet-modal"><button class="modal-close" data-close aria-label="Close">×</button><p class="eyebrow">PET PROFILE</p><h2 id="petDialogTitle">Add a pet</h2><p>Keep the details that matter close at paw.</p><form id="petForm"><input type="hidden" name="id"><div class="photo-field"><div id="photoPreview" class="photo-preview" aria-hidden="true">🐾</div><label>Profile photo <span class="optional">Optional</span><input name="photo" type="file" accept="image/*"></label></div><div class="form-row"><label>Pet name <span class="required">*</span><input name="name" required maxlength="50" autocomplete="off"></label><label>Species <span class="required">*</span><select name="species" required><option value="">Choose one</option><option value="dog">Dog</option><option value="cat">Cat</option><option value="bird">Bird</option><option value="other">Other</option></select></label></div><label>Breed <span class="required">*</span><input name="breed" required maxlength="80" placeholder="e.g. Golden Retriever"></label><fieldset><legend>Age <span class="required">*</span></legend><p class="field-help">Enter a date of birth or an age.</p><div class="form-row"><label>Date of birth<input name="birthday" type="date"></label><label>Age<input name="age" maxlength="30" placeholder="e.g. 3 years"></label></div></fieldset><div class="form-row"><label>Sex <span class="required">*</span><select name="sex" required><option value="">Choose one</option><option>Female</option><option>Male</option><option>Unknown</option></select></label><label>Weight <span class="required">*</span><input name="weight" required maxlength="30" placeholder="e.g. 31 kg"></label></div><label>Microchip number<input name="microchip" maxlength="40"></label><div class="form-row"><label>Allergies<textarea name="allergies" placeholder="None known"></textarea></label><label>Medications<textarea name="medications" placeholder="None"></textarea></label></div><div class="form-row"><label>Veterinarian name<input name="vetName" maxlength="80"></label><label>Veterinarian phone<input name="vetPhone" type="tel" maxlength="30"></label></div><label>Medical notes<textarea name="medicalNotes" placeholder="Conditions, care instructions, or anything else to know"></textarea></label><p id="petFormError" class="form-error" role="alert"></p><div class="modal-actions"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Save Pet</button></div></form></dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.write('<script src=&quot;https://unpkg.com/@supabase/supabase-js@2&quot;><\/script>')"></script>
-  <script src="config.js"></script>
-  <script src="backend.js?v=20260819-signup-redirect-fix"></script>
-  <script src="app.js?v=20260817-reset-validation-fix"></script>
-  <script>
-    (() => {
-      const form = document.getElementById("resetForm");
-      const email = form?.elements.email;
-      const password = form?.elements.password;
-      const recovery = new URLSearchParams(location.search).get("type") === "recovery" || location.hash.includes("type=recovery");
-      if (recovery && email && password) {
-        email.required = false;
-        password.required = true;
-      }
-      document.getElementById("forgotBtn")?.addEventListener("click", () => {
-        if (email && password) {
-          email.required = true;
-          password.required = false;
-        }
-      });
-    })();
-  </script>
-  <script src="profile-edit.js"></script>
-  <script src="emergency-share.js"></script>
-  <script src="payments.js?v=20260819-checkout-return-fix"></script>
-  <script src="plus-features.js?v=20260819-plus-gates"></script>
-  <script src="smart-reminders.js?v=20260819-smart-reminders"></script>
-</body>
-</html>
+  <script src="config.js"></script><script src="backend.js?v=20260819-signup-redirect-fix"></script><script src="app.js?v=20260817-reset-validation-fix"></script>
+  <script>(()=>{const form=document.getElementById("resetForm");const email=form?.elements.email;const password=form?.elements.password;const recovery=new URLSearchParams(location.search).get("type")==="recovery"||location.hash.includes("type=recovery");if(recovery&&email&&password){email.required=false;password.required=true;}document.getElementById("forgotBtn")?.addEventListener("click",()=>{if(email&&password){email.required=true;password.required=false;}});})();</script>
+  <script src="profile-edit.js"></script><script src="emergency-share.js"></script><script src="payments.js?v=20260819-checkout-return-fix"></script><script src="plus-features.js?v=20260819-plus-gates"></script><script src="smart-reminders.js?v=20260819-smart-reminders"></script><script src="support.js?v=20260819-support"></script>
+</body></html>
