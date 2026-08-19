@@ -1,6 +1,8 @@
 (() => {
   const STORAGE_KEY = "pawpass-plus-smart-reminders";
   const CARD_ID = "pawpassSmartReminders";
+  let rendering = false;
+
   const styles = document.createElement("style");
   styles.textContent = `
     .smart-reminders-card{margin:20px 0;padding:22px;border-radius:20px;background:linear-gradient(135deg,#fff7f0,#f6fbff);border:1px solid rgba(0,0,0,.06)}
@@ -38,32 +40,49 @@
     return next;
   }
 
-  async function render() {
-    if (!location.hash.toLowerCase().includes("schedule")) return;
-    const view = document.getElementById("view");
-    if (!view || document.getElementById(CARD_ID)) return;
-    let active = false;
-    try { active = await window.PawPassPlus?.isActive(); } catch { return; }
-    if (!active) return;
+  function removeDuplicateCards() {
+    const cards = [...document.querySelectorAll(`#${CARD_ID}`)];
+    cards.slice(1).forEach(card => card.remove());
+  }
 
-    const reminders = read();
-    const card = document.createElement("section");
-    card.id = CARD_ID;
-    card.className = "smart-reminders-card";
-    card.innerHTML = `
-      <div class="smart-reminders-head">
-        <div><span class="smart-reminders-badge">PAWPASS PLUS</span><h3>Advanced care reminders</h3><p>Create recurring daily, weekly, or monthly reminders.</p></div>
-      </div>
-      <div class="smart-reminders-list">
-        ${reminders.length ? reminders.map(r=>`<div class="smart-reminder" data-smart-id="${esc(r.id)}"><div><b>${esc(r.title)}</b><small>${esc(cadenceLabel(r.cadence))} · ${esc(r.time || "09:00")} · Next: ${esc(nextDue(r).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small></div><div class="smart-reminder-actions"><button class="btn btn-ghost" data-smart-delete="${esc(r.id)}">Delete</button></div></div>`).join("") : `<div class="smart-reminders-empty">No recurring reminders yet.</div>`}
-      </div>
-      <form class="smart-reminder-form" id="smartReminderForm">
-        <input name="title" required maxlength="80" placeholder="e.g. Heartworm medication">
-        <select name="cadence"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
-        <input name="time" type="time" value="09:00" required>
-        <button class="btn btn-primary" type="submit">+ Add recurring</button>
-      </form>`;
-    view.prepend(card);
+  async function render() {
+    if (rendering || !location.hash.toLowerCase().includes("schedule")) return;
+    const view = document.getElementById("view");
+    if (!view) return;
+
+    removeDuplicateCards();
+    if (document.getElementById(CARD_ID)) return;
+
+    rendering = true;
+    try {
+      let active = false;
+      try { active = await window.PawPassPlus?.isActive(); } catch { return; }
+      if (!active || !location.hash.toLowerCase().includes("schedule")) return;
+
+      removeDuplicateCards();
+      if (document.getElementById(CARD_ID)) return;
+
+      const reminders = read();
+      const card = document.createElement("section");
+      card.id = CARD_ID;
+      card.className = "smart-reminders-card";
+      card.innerHTML = `
+        <div class="smart-reminders-head">
+          <div><span class="smart-reminders-badge">PAWPASS PLUS</span><h3>Advanced care reminders</h3><p>Create recurring daily, weekly, or monthly reminders.</p></div>
+        </div>
+        <div class="smart-reminders-list">
+          ${reminders.length ? reminders.map(r=>`<div class="smart-reminder" data-smart-id="${esc(r.id)}"><div><b>${esc(r.title)}</b><small>${esc(cadenceLabel(r.cadence))} · ${esc(r.time || "09:00")} · Next: ${esc(nextDue(r).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</small></div><div class="smart-reminder-actions"><button class="btn btn-ghost" data-smart-delete="${esc(r.id)}">Delete</button></div></div>`).join("") : `<div class="smart-reminders-empty">No recurring reminders yet.</div>`}
+        </div>
+        <form class="smart-reminder-form" id="smartReminderForm">
+          <input name="title" required maxlength="80" placeholder="e.g. Heartworm medication">
+          <select name="cadence"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+          <input name="time" type="time" value="09:00" required>
+          <button class="btn btn-primary" type="submit">+ Add recurring</button>
+        </form>`;
+      view.prepend(card);
+    } finally {
+      rendering = false;
+    }
   }
 
   document.addEventListener("submit", event => {
