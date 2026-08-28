@@ -1,0 +1,3 @@
+export type Pet={id:number;public_id?:string|null;user_id:string;name:string;species:string;animal?:string|null;breed:string;age?:string|null;weight:string;birthday?:string|null;sex:string;photo_url?:string|null;photo_position_x?:number|null;photo_position_y?:number|null;photo_zoom?:number|null;microchip?:string|null;allergies?:string|null;medications?:string|null;vet_name?:string|null;vet_phone?:string|null;medical_notes?:string|null;status:string};
+export type ScheduleItem={id:number;pet_id:number;schedule_type:string;title:string;display_date:string;display_time?:string|null;scheduled_at?:string|null;notes?:string|null;done:boolean};
+export type Profile={id:string;name:string;emergency_phone?:string|null};
