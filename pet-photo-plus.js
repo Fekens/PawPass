@@ -13,6 +13,8 @@
   let frameY = 50;
   let frameZoom = 1;
   let dragging = null;
+  let lastHydrationKey = "";
+  let hydrationInFlight = false;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const frameNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -138,6 +140,60 @@
     }
   }
 
+  async function hydrateCloudFraming() {
+    try {
+      if (typeof state === "undefined" || !Array.isArray(state.pets) || window.PawPassBackend?.demo?.()) return;
+      const client = window.PawPassBackend?.client;
+      if (!client || hydrationInFlight) return;
+      const key = state.pets.map(pet => pet.id).sort().join(",");
+      if (!key || key === lastHydrationKey) return;
+      hydrationInFlight = true;
+      const { data, error } = await client.from("pets").select("id,photo_position_x,photo_position_y,photo_zoom");
+      if (error) throw error;
+      (data || []).forEach(row => {
+        const pet = state.pets.find(candidate => String(candidate.id) === String(row.id));
+        if (!pet) return;
+        pet.photoPositionX = clamp(frameNumber(row.photo_position_x, 50), 0, 100);
+        pet.photoPositionY = clamp(frameNumber(row.photo_position_y, 50), 0, 100);
+        pet.photoZoom = clamp(frameNumber(row.photo_zoom, 1), 1, 3);
+      });
+      lastHydrationKey = key;
+      applySavedFraming();
+      const editingPet = currentPetFromForm();
+      if (editingPet && document.getElementById("petDialog")?.open) loadFrameForPet(editingPet);
+    } catch (error) {
+      console.error("Could not load pet photo framing", error);
+    } finally {
+      hydrationInFlight = false;
+    }
+  }
+
+  async function persistFrame(pet) {
+    if (!pet?.photo) return;
+    pet.photoPositionX = Math.round(frameX * 100) / 100;
+    pet.photoPositionY = Math.round(frameY * 100) / 100;
+    pet.photoZoom = Math.round(frameZoom * 100) / 100;
+
+    if (window.PawPassBackend?.demo?.()) {
+      if (typeof save === "function") save();
+      applySavedFraming();
+      return;
+    }
+
+    const client = window.PawPassBackend?.client;
+    if (!client) return;
+    if (typeof window.PawPassBackend?.sync === "function" && typeof state !== "undefined") {
+      await window.PawPassBackend.sync(state);
+    }
+    const { error } = await client.from("pets").update({
+      photo_position_x: pet.photoPositionX,
+      photo_position_y: pet.photoPositionY,
+      photo_zoom: pet.photoZoom
+    }).eq("id", pet.id);
+    if (error) throw error;
+    applySavedFraming();
+  }
+
   function setPreview(url) {
     if (!preview || !url) return;
     preview.innerHTML = `<img src="${url}" alt="Pet profile preview">`;
@@ -242,7 +298,10 @@
   const previewObserver = new MutationObserver(() => applyPreviewFrame());
   if (preview) previewObserver.observe(preview, { childList: true });
 
-  const appObserver = new MutationObserver(() => applySavedFraming());
+  const appObserver = new MutationObserver(() => {
+    applySavedFraming();
+    hydrateCloudFraming();
+  });
   appObserver.observe(document.body, { childList: true, subtree: true });
 
   form.addEventListener("submit", async event => {
@@ -281,20 +340,17 @@
   }, true);
 
   form.addEventListener("submit", () => {
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       const dialog = document.getElementById("petDialog");
       if (dialog?.open) return;
       try {
         if (typeof state === "undefined" || !Array.isArray(state.pets)) return;
         const pet = state.pets.find(candidate => String(candidate.id) === String(state.selectedPetId));
         if (!pet?.photo) return;
-        pet.photoPositionX = Math.round(frameX * 100) / 100;
-        pet.photoPositionY = Math.round(frameY * 100) / 100;
-        pet.photoZoom = Math.round(frameZoom * 100) / 100;
-        if (typeof save === "function") save();
-        applySavedFraming();
+        await persistFrame(pet);
       } catch (error) {
         console.error("Could not save pet photo framing", error);
+        notify("Your pet was saved, but the photo framing could not be saved. Please try editing the pet again.");
       }
     });
   }, true);
@@ -302,6 +358,7 @@
   requestAnimationFrame(() => {
     loadFrameForPet(currentPetFromForm());
     applySavedFraming();
+    hydrateCloudFraming();
   });
 
   window.PawPassPetPhotos = {
