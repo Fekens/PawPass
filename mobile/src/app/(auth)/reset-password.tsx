@@ -18,6 +18,8 @@ function getLinkParams(url: string) {
     accessToken: get('access_token'),
     refreshToken: get('refresh_token'),
     code: get('code'),
+    tokenHash: get('token_hash'),
+    type: get('type'),
     errorDescription: get('error_description'),
   };
 }
@@ -32,11 +34,15 @@ export default function ResetPassword() {
     access_token?: string | string[];
     refresh_token?: string | string[];
     code?: string | string[];
+    token_hash?: string | string[];
+    type?: string | string[];
     error_description?: string | string[];
   }>();
   const routeAccessToken = firstValue(routeParams.access_token);
   const routeRefreshToken = firstValue(routeParams.refresh_token);
   const routeCode = firstValue(routeParams.code);
+  const routeTokenHash = firstValue(routeParams.token_hash);
+  const routeType = firstValue(routeParams.type);
   const routeErrorDescription = firstValue(routeParams.error_description);
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -45,7 +51,7 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!url && !routeAccessToken && !routeRefreshToken && !routeCode) {
+    if (!url && !routeAccessToken && !routeRefreshToken && !routeCode && !routeTokenHash) {
       setMessage('Open this screen using the reset link in your email.');
       return;
     }
@@ -57,11 +63,15 @@ export default function ResetPassword() {
         accessToken: null,
         refreshToken: null,
         code: null,
+        tokenHash: null,
+        type: null,
         errorDescription: null,
       };
       const accessToken = routeAccessToken ?? linkParams.accessToken;
       const refreshToken = routeRefreshToken ?? linkParams.refreshToken;
       const code = routeCode ?? linkParams.code;
+      const tokenHash = routeTokenHash ?? linkParams.tokenHash;
+      const recoveryType = routeType ?? linkParams.type;
       const errorDescription = routeErrorDescription ?? linkParams.errorDescription;
 
       if (errorDescription) {
@@ -69,9 +79,11 @@ export default function ResetPassword() {
         return;
       }
 
-      const result = code
-        ? await supabase.auth.exchangeCodeForSession(code)
-        : accessToken && refreshToken
+      const result = tokenHash && recoveryType === 'recovery'
+        ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+        : code
+          ? await supabase.auth.exchangeCodeForSession(code)
+          : accessToken && refreshToken
           ? await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
@@ -99,7 +111,15 @@ export default function ResetPassword() {
     return () => {
       active = false;
     };
-  }, [routeAccessToken, routeCode, routeErrorDescription, routeRefreshToken, url]);
+  }, [
+    routeAccessToken,
+    routeCode,
+    routeErrorDescription,
+    routeRefreshToken,
+    routeTokenHash,
+    routeType,
+    url,
+  ]);
 
   async function updatePassword() {
     if (password.length < 8) {
