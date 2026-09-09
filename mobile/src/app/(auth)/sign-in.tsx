@@ -34,7 +34,9 @@ export default function SignIn() {
     }
 
     setResetBusy(true);
-    const redirectTo = Linking.createURL('/reset-password');
+    const redirectTo = __DEV__
+      ? 'exp://172.20.10.5:8081/--/reset-password'
+      : Linking.createURL('reset-password', { scheme: 'pawpass' });
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo,
     });
