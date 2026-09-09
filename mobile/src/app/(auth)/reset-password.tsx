@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Linking from 'expo-linking';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 
 import { Screen } from '@/components/Screen';
 import { supabase } from '@/lib/supabase';
@@ -22,8 +22,22 @@ function getLinkParams(url: string) {
   };
 }
 
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default function ResetPassword() {
   const url = Linking.useURL();
+  const routeParams = useLocalSearchParams<{
+    access_token?: string | string[];
+    refresh_token?: string | string[];
+    code?: string | string[];
+    error_description?: string | string[];
+  }>();
+  const routeAccessToken = firstValue(routeParams.access_token);
+  const routeRefreshToken = firstValue(routeParams.refresh_token);
+  const routeCode = firstValue(routeParams.code);
+  const routeErrorDescription = firstValue(routeParams.error_description);
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [ready, setReady] = useState(false);
@@ -31,7 +45,7 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!url) {
+    if (!url && !routeAccessToken && !routeRefreshToken && !routeCode) {
       setMessage('Open this screen using the reset link in your email.');
       return;
     }
@@ -39,7 +53,16 @@ export default function ResetPassword() {
     let active = true;
 
     async function prepareRecovery() {
-      const { accessToken, refreshToken, code, errorDescription } = getLinkParams(url!);
+      const linkParams = url ? getLinkParams(url) : {
+        accessToken: null,
+        refreshToken: null,
+        code: null,
+        errorDescription: null,
+      };
+      const accessToken = routeAccessToken ?? linkParams.accessToken;
+      const refreshToken = routeRefreshToken ?? linkParams.refreshToken;
+      const code = routeCode ?? linkParams.code;
+      const errorDescription = routeErrorDescription ?? linkParams.errorDescription;
 
       if (errorDescription) {
         if (active) setMessage(errorDescription);
@@ -76,7 +99,7 @@ export default function ResetPassword() {
     return () => {
       active = false;
     };
-  }, [url]);
+  }, [routeAccessToken, routeCode, routeErrorDescription, routeRefreshToken, url]);
 
   async function updatePassword() {
     if (password.length < 8) {
